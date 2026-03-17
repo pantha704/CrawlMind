@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Clock, Trash2, Ban } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface Job {
   id: string;
@@ -45,6 +47,34 @@ export function ActiveJobs() {
     return () => clearInterval(interval);
   }, []);
 
+  const handleCancel = async (jobId: string) => {
+    try {
+      const res = await fetch(`/api/crawl/${jobId}/cancel`, { method: "POST" });
+      if (res.ok) {
+        setJobs((prev) => prev.filter((j) => j.id !== jobId));
+        toast.success("Job cancelled");
+      } else {
+        toast.error("Failed to cancel job");
+      }
+    } catch {
+      toast.error("Failed to cancel job");
+    }
+  };
+
+  const handleDelete = async (jobId: string) => {
+    try {
+      const res = await fetch(`/api/crawl/${jobId}`, { method: "DELETE" });
+      if (res.ok) {
+        setJobs((prev) => prev.filter((j) => j.id !== jobId));
+        toast.success("Job archived");
+      } else {
+        toast.error("Failed to archive job");
+      }
+    } catch {
+      toast.error("Failed to archive job");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-muted-foreground text-sm">
@@ -77,7 +107,7 @@ export function ActiveJobs() {
         return (
           <div
             key={job.id}
-            className="p-4 rounded-xl bg-card border border-border/50 space-y-3"
+            className="group p-4 rounded-xl bg-card border border-border/50 space-y-3"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 min-w-0">
@@ -90,9 +120,31 @@ export function ActiveJobs() {
                   {job.query}
                 </span>
               </div>
-              <Badge variant="outline" className="shrink-0 text-xs">
-                {cfg.label}
-              </Badge>
+              <div className="flex items-center gap-1.5">
+                {(job.status === "RUNNING" || job.status === "QUEUED") && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-yellow-500"
+                    onClick={() => handleCancel(job.id)}
+                    title="Cancel job"
+                  >
+                    <Ban className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-red-400"
+                  onClick={() => handleDelete(job.id)}
+                  title="Delete job"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+                <Badge variant="outline" className="shrink-0 text-xs">
+                  {cfg.label}
+                </Badge>
+              </div>
             </div>
 
             {job.status === "RUNNING" && (

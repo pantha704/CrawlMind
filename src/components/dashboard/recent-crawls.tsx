@@ -7,8 +7,11 @@ import {
   XCircle,
   FileText,
   ExternalLink,
+  Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import Link from "next/link";
 
 interface CrawlRecord {
@@ -42,6 +45,22 @@ export function RecentCrawls() {
     fetchRecent();
   }, []);
 
+  const handleDelete = async (crawlId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const res = await fetch(`/api/crawl/${crawlId}`, { method: "DELETE" });
+      if (res.ok) {
+        setCrawls((prev) => prev.filter((c) => c.id !== crawlId));
+        toast.success("Crawl archived");
+      } else {
+        toast.error("Failed to archive crawl");
+      }
+    } catch {
+      toast.error("Failed to archive crawl");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-muted-foreground text-sm">
@@ -68,12 +87,14 @@ export function RecentCrawls() {
       </h3>
       <div className="space-y-2">
         {crawls.map((crawl) => (
-          <Link
+          <div
             key={crawl.id}
-            href={`/dashboard/jobs/${crawl.id}`}
-            className="flex items-center justify-between p-4 rounded-xl bg-card border border-border/50 hover:border-primary/20 transition-all group"
+            className="group flex items-center justify-between p-4 rounded-xl bg-card border border-border/50 hover:border-primary/20 transition-all"
           >
-            <div className="flex items-center gap-3 min-w-0">
+            <Link
+              href={`/dashboard/jobs/${crawl.id}`}
+              className="flex items-center gap-3 min-w-0 flex-1"
+            >
               {crawl.status === "COMPLETED" ? (
                 <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
               ) : (
@@ -87,14 +108,25 @@ export function RecentCrawls() {
                   {crawl.format}
                 </p>
               </div>
-            </div>
+            </Link>
             <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-red-400"
+                onClick={(e) => handleDelete(crawl.id, e)}
+                title="Archive crawl"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </Button>
               <Badge variant="outline" className="text-xs">
                 {crawl.inputType}
               </Badge>
-              <ExternalLink className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+              <Link href={`/dashboard/jobs/${crawl.id}`}>
+                <ExternalLink className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+              </Link>
             </div>
-          </Link>
+          </div>
         ))}
       </div>
     </div>

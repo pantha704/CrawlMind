@@ -43,7 +43,7 @@ export default function LibraryPage() {
 
   const fetchJobs = useCallback(async () => {
     try {
-      const res = await fetch("/api/crawl/recent");
+      const res = await fetch("/api/crawl/library");
       const data = await res.json();
       setJobs(data.crawls || []);
     } catch {
@@ -139,6 +139,17 @@ export default function LibraryPage() {
                 day: "numeric",
               })}
             </span>
+            <Badge
+              variant="outline"
+              className={`text-[10px] px-1.5 py-0 ${
+                job.status === "COMPLETED" ? "text-green-500 border-green-500/30" :
+                job.status === "FAILED" ? "text-red-500 border-red-500/30" :
+                job.status === "RUNNING" ? "text-blue-500 border-blue-500/30" :
+                "text-yellow-500 border-yellow-500/30"
+              }`}
+            >
+              {job.status}
+            </Badge>
           </div>
         </div>
         <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -184,9 +195,9 @@ export default function LibraryPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Saved Results</h1>
+        <h1 className="text-2xl font-bold">Library</h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          Your crawl result library — archive or restore past crawls
+          Permanent record of all crawls — archive or restore anytime
         </p>
       </div>
 
