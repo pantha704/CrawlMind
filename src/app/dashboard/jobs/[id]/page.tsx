@@ -179,7 +179,7 @@ export default function JobDetailPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div className="space-y-2">
           <div className="flex items-center gap-3">
             {statusIcon}
@@ -210,7 +210,7 @@ export default function JobDetailPage() {
           )}
         </div>
 
-        <div className="flex gap-2 shrink-0">
+        <div className="flex gap-2 shrink-0 flex-wrap">
           {job.status === "FAILED" && (
             <Button
               variant="outline"
@@ -255,8 +255,8 @@ export default function JobDetailPage() {
         <TabsContent value="results" className="mt-0">
           {/* Per-page navigation for crawled records */}
           {completedPages.length > 1 && (
-            <div className="flex items-center justify-between mb-3 px-1">
-              <span className="text-sm text-muted-foreground">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 px-1 gap-2">
+              <span className="text-sm text-muted-foreground truncate">
                 Page {currentPage + 1} of {completedPages.length}
                 {skippedCount > 0 && (
                   <> · <span className="text-yellow-500">{skippedCount} skipped</span></>
@@ -288,7 +288,7 @@ export default function JobDetailPage() {
             </div>
           )}
 
-          <ScrollArea className="h-[600px] rounded-xl border border-border/50 bg-card p-6">
+          <ScrollArea className="h-[400px] sm:h-[600px] rounded-xl border border-border/50 bg-card p-4 sm:p-6">
             {job.error ? (
               <div className="text-destructive text-sm">
                 <p className="font-medium">Error</p>

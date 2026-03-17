@@ -1,18 +1,17 @@
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
+import { Sprout } from "lucide-react";
 
 export function Footer() {
   return (
     <footer className="border-t border-border/50 bg-card/30">
       <div className="max-w-6xl mx-auto px-6 py-12">
-        <div className="grid md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="md:col-span-1">
             <Link href="/" className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">
-                  CM
-                </span>
+                <Sprout className="w-5 h-5 text-primary-foreground" />
               </div>
               <span className="font-bold text-lg">CrawlMind</span>
             </Link>

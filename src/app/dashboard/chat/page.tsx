@@ -134,7 +134,7 @@ export default function AIChatPage() {
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-border/50">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border/50 gap-3">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
@@ -145,7 +145,7 @@ export default function AIChatPage() {
           </p>
         </div>
         <Select value={selectedJob} onValueChange={(v) => { if (v) setSelectedJob(v); }}>
-          <SelectTrigger className="w-[280px] bg-card border-border/50">
+          <SelectTrigger className="w-full sm:w-[280px] bg-card border-border/50">
             <SelectValue placeholder="Select a crawl for context..." />
           </SelectTrigger>
           <SelectContent>
@@ -209,7 +209,7 @@ export default function AIChatPage() {
                   </div>
                 )}
                 <div
-                  className={`max-w-[80%] rounded-xl px-4 py-3 text-sm leading-relaxed ${
+                  className={`max-w-[90%] sm:max-w-[80%] rounded-xl px-4 py-3 text-sm leading-relaxed ${
                     msg.role === "user"
                       ? "bg-primary text-primary-foreground"
                       : "bg-card border border-border/50"

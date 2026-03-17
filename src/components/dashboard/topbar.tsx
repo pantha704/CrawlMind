@@ -45,14 +45,14 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   };
 
   return (
-    <header className="h-16 border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-40 px-6 flex items-center justify-between gap-4">
+    <header className="h-16 border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-40 px-4 sm:px-6 flex items-center justify-between gap-4">
       {/* Mobile menu button */}
       <button onClick={onMenuClick} className="lg:hidden p-2 -ml-2">
         <Menu className="w-5 h-5" />
       </button>
 
       {/* Search */}
-      <div className="flex-1 max-w-md">
+      <div className="hidden sm:flex flex-1 max-w-md">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input

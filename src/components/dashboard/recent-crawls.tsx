@@ -92,7 +92,7 @@ export function RecentCrawls() {
         {crawls.map((crawl) => (
           <div
             key={crawl.id}
-            className="group flex items-center justify-between p-4 rounded-xl bg-card border border-border/50 hover:border-primary/20 transition-all"
+            className="group flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 rounded-xl bg-card border border-border/50 hover:border-primary/20 transition-all gap-2 sm:gap-0"
           >
             <Link
               href={`/dashboard/jobs/${crawl.id}`}
@@ -116,7 +116,7 @@ export function RecentCrawls() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-red-400"
+                className="h-7 w-7 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-red-400"
                 onClick={(e) => handleDelete(crawl.id, e)}
                 title="Archive crawl"
               >
@@ -125,7 +125,7 @@ export function RecentCrawls() {
               <Badge variant="outline" className="text-xs">
                 {crawl.inputType}
               </Badge>
-              <Link href={`/dashboard/jobs/${crawl.id}`}>
+              <Link href={`/dashboard/jobs/${crawl.id}`} className="hidden sm:block">
                 <ExternalLink className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </Link>
             </div>

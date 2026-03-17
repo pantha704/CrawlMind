@@ -30,7 +30,7 @@ export function AiChatPanel({ jobId }: AiChatPanelProps) {
   }, [messages]);
 
   return (
-    <div className="flex flex-col h-[600px] rounded-xl border border-border/50 bg-card overflow-hidden">
+    <div className="flex flex-col h-[400px] sm:h-[600px] rounded-xl border border-border/50 bg-card overflow-hidden">
       {/* Messages */}
       <ScrollArea className="flex-1 p-4" ref={scrollRef}>
         {messages.length === 0 ? (
@@ -75,7 +75,7 @@ export function AiChatPanel({ jobId }: AiChatPanelProps) {
                   </Avatar>
                 )}
                 <div
-                  className={`max-w-[80%] rounded-xl px-4 py-3 text-sm leading-relaxed ${
+                  className={`max-w-[90%] sm:max-w-[80%] rounded-xl px-4 py-3 text-sm leading-relaxed ${
                     msg.role === "user"
                       ? "bg-primary text-primary-foreground"
                       : "bg-secondary/50 text-foreground"
@@ -111,7 +111,7 @@ export function AiChatPanel({ jobId }: AiChatPanelProps) {
       {/* Input */}
       <form
         onSubmit={handleSubmit}
-        className="border-t border-border/50 p-4 flex gap-3"
+        className="border-t border-border/50 p-3 sm:p-4 flex gap-2 sm:gap-3"
       >
         <Textarea
           value={input}

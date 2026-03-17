@@ -212,7 +212,7 @@ export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-xl bg-card border border-border/50">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-xl bg-card border border-border/50">
               {/* Depth */}
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">

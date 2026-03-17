@@ -121,7 +121,7 @@ export function ActiveJobs() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-yellow-500"
+                    className="h-7 w-7 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-yellow-500"
                     onClick={() => handleCancel(job.id)}
                     title="Cancel job"
                   >
@@ -131,7 +131,7 @@ export function ActiveJobs() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-red-400"
+                   className="h-7 w-7 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-red-400"
                   onClick={() => handleDelete(job.id)}
                   title="Delete job"
                 >

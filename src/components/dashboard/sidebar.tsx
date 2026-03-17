@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -29,29 +30,34 @@ const navItems = [
   { icon: Settings, label: "Settings", href: "/dashboard/settings" },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  open?: boolean;
+  onClose?: () => void;
+}
+
+function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
-  const [usage, setUsage] = useState({ 
-    plan: "SPARK", 
-    planLabel: "Spark Plan", 
-    crawlsToday: 0, 
+  const [usage, setUsage] = useState({
+    plan: "SPARK",
+    planLabel: "Spark Plan",
+    crawlsToday: 0,
     maxCrawls: 2,
-    usagePercent: 0
+    usagePercent: 0,
   });
 
   useEffect(() => {
     fetch("/api/user/usage")
-      .then(r => r.json())
-      .then(data => {
+      .then((r) => r.json())
+      .then((data) => {
         if (!data.error) setUsage(data);
       });
   }, []);
 
   return (
-    <aside className="hidden lg:flex flex-col w-64 h-screen bg-sidebar border-r border-sidebar-border sticky top-0">
+    <>
       {/* Logo */}
       <div className="h-16 px-6 flex items-center border-b border-sidebar-border">
-        <Link href="/" className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2" onClick={onNavigate}>
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
             <Sprout className="w-5 h-5 text-primary-foreground" />
           </div>
@@ -63,7 +69,7 @@ export function Sidebar() {
 
       {/* New Crawl Button */}
       <div className="px-4 pt-4">
-        <Link href="/dashboard">
+        <Link href="/dashboard" onClick={onNavigate}>
           <Button className="w-full glow-cyan" size="lg">
             <Plus className="w-4 h-4 mr-2" />
             New Crawl
@@ -82,6 +88,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onNavigate}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200",
                 isActive
@@ -114,7 +121,9 @@ export function Sidebar() {
           <span className="px-2 py-0.5 rounded-full bg-primary/20 text-primary font-medium">
             {usage.planLabel}
           </span>
-          <span className="text-sidebar-foreground/50">{usage.crawlsToday}/{usage.maxCrawls} today</span>
+          <span className="text-sidebar-foreground/50">
+            {usage.crawlsToday}/{usage.maxCrawls} today
+          </span>
         </div>
         <Progress value={usage.usagePercent} className="h-1.5" />
 
@@ -123,6 +132,27 @@ export function Sidebar() {
           Log out
         </button>
       </div>
-    </aside>
+    </>
+  );
+}
+
+export function Sidebar({ open, onClose }: SidebarProps) {
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <aside className="hidden lg:flex flex-col w-64 h-screen bg-sidebar border-r border-sidebar-border sticky top-0">
+        <SidebarContent />
+      </aside>
+
+      {/* Mobile sidebar (Sheet) */}
+      <Sheet open={open} onOpenChange={onClose}>
+        <SheetContent
+          side="left"
+          className="w-64 p-0 bg-sidebar border-sidebar-border flex flex-col"
+        >
+          <SidebarContent onNavigate={onClose} />
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }
