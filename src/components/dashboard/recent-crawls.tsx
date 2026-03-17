@@ -43,6 +43,9 @@ export function RecentCrawls() {
       }
     }
     fetchRecent();
+    // Re-fetch every 10s so completed jobs appear automatically
+    const interval = setInterval(fetchRecent, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleDelete = async (crawlId: string, e: React.MouseEvent) => {

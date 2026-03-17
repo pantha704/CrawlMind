@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { streamText } from "ai";
+import { streamText, convertToModelMessages, UIMessage } from "ai";
 import { chatModel, fastModel } from "@/lib/ai";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+
+export const maxDuration = 30;
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,7 +18,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { jobId, messages } = body;
+    const { jobId, messages }: { jobId: string; messages: UIMessage[] } = body;
 
     if (!jobId || !messages || !Array.isArray(messages)) {
       return NextResponse.json(
@@ -65,17 +67,17 @@ ${resultPreview || "No content extracted yet — the crawl may still be in progr
       result = streamText({
         model: chatModel,
         system: systemPrompt,
-        messages,
+        messages: await convertToModelMessages(messages),
       });
     } catch {
       result = streamText({
         model: fastModel,
         system: systemPrompt,
-        messages,
+        messages: await convertToModelMessages(messages),
       });
     }
 
-    return result.toTextStreamResponse();
+    return result.toUIMessageStreamResponse();
   } catch (err) {
     console.error("AI chat error:", err);
     return NextResponse.json(
@@ -84,3 +86,4 @@ ${resultPreview || "No content extracted yet — the crawl may still be in progr
     );
   }
 }
+
