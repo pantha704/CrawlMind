@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { useSession, signOut } from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
 
 interface TopbarProps {
   onMenuClick?: () => void;
@@ -20,6 +22,14 @@ interface TopbarProps {
 
 export function Topbar({ onMenuClick }: TopbarProps) {
   const [usage, setUsage] = useState({ crawlsToday: 0, maxCrawls: 2 });
+  const { data: session } = useSession();
+  const router = useRouter();
+
+  const userInitial = session?.user?.name
+    ? session.user.name.charAt(0).toUpperCase()
+    : session?.user?.email
+    ? session.user.email.charAt(0).toUpperCase()
+    : "?";
 
   useEffect(() => {
     fetch("/api/user/usage")
@@ -28,6 +38,11 @@ export function Topbar({ onMenuClick }: TopbarProps) {
         if (!data.error) setUsage(data);
       });
   }, []);
+
+  const handleLogout = async () => {
+    await signOut();
+    router.push("/signin");
+  };
 
   return (
     <header className="h-16 border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-40 px-6 flex items-center justify-between gap-4">
@@ -64,7 +79,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
           <DropdownMenuTrigger className="relative h-8 w-8 rounded-full outline-none">
             <Avatar className="h-8 w-8 cursor-pointer">
               <AvatarFallback className="bg-primary/20 text-primary text-xs">
-                U
+                {userInitial}
               </AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>
@@ -76,7 +91,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
               <Link href="/pricing" className="flex w-full">Upgrade Plan</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">
+            <DropdownMenuItem className="text-destructive" onClick={handleLogout}>
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -85,3 +100,4 @@ export function Topbar({ onMenuClick }: TopbarProps) {
     </header>
   );
 }
+
