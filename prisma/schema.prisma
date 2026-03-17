@@ -17,8 +17,9 @@ model User {
   updatedAt     DateTime  @updatedAt
   
   // Custom CrawlMind fields
-  plan             String   @default("SPARK") // SPARK, PRO, SCALE
-  stripeCustomerId String?  @unique
+  plan                   String   @default("SPARK") // SPARK, PRO, PRO_PLUS, SCALE
+  razorpayCustomerId     String?  @unique
+  razorpaySubscriptionId String?  @unique
   
   // Relationships
   sessions    Session[]

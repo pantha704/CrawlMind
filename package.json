@@ -28,6 +28,7 @@
     "next": "16.1.6",
     "next-themes": "^0.4.6",
     "prisma": "6",
+    "razorpay": "^2.9.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-markdown": "^10.1.0",

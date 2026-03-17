@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export function SettingsManageSubscription({ plan }: { plan: string }) {
@@ -15,14 +15,19 @@ export function SettingsManageSubscription({ plan }: { plan: string }) {
       return;
     }
 
+    // Cancel subscription
+    if (!confirm("Are you sure you want to cancel your subscription? You'll be downgraded to the Spark (free) plan.")) {
+      return;
+    }
+
     setLoading(true);
     try {
-      const res = await fetch("/api/stripe/portal", { method: "POST" });
+      const res = await fetch("/api/razorpay/cancel", { method: "POST" });
       const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
+      if (data.success) {
+        router.refresh();
       } else {
-        throw new Error(data.error || "Failed to load portal");
+        throw new Error(data.error || "Failed to cancel");
       }
     } catch (err) {
       console.error(err);
@@ -36,7 +41,7 @@ export function SettingsManageSubscription({ plan }: { plan: string }) {
     <Button 
       onClick={handleManage} 
       disabled={loading}
-      variant={plan === "SPARK" ? "default" : "outline"}
+      variant={plan === "SPARK" ? "default" : "destructive"}
       className="w-full sm:w-auto"
     >
       {loading ? (
@@ -44,9 +49,7 @@ export function SettingsManageSubscription({ plan }: { plan: string }) {
       ) : plan === "SPARK" ? (
         "Upgrade Plan"
       ) : (
-        <>
-          Manage Subscription <ExternalLink className="w-4 h-4 ml-2" />
-        </>
+        "Cancel Subscription"
       )}
     </Button>
   );

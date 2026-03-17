@@ -7,6 +7,15 @@ import { Button } from "@/components/ui/button";
 import { useSession } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/landing/navbar";
+import Script from "next/script";
+
+declare global {
+  interface Window {
+    Razorpay: new (options: Record<string, unknown>) => {
+      open: () => void;
+    };
+  }
+}
 
 const plans = [
   {
@@ -29,7 +38,7 @@ const plans = [
     name: "Pro",
     id: "PRO",
     tagline: "For power users",
-    price: "$12",
+    price: "₹999",
     period: "/mo",
     cta: "Start 7-day trial",
     popular: true,
@@ -48,7 +57,7 @@ const plans = [
     name: "Pro+",
     id: "PRO_PLUS",
     tagline: "For serious builders",
-    price: "$24",
+    price: "₹1,999",
     period: "/mo",
     cta: "Get Pro+",
     inherits: "Everything in Pro, plus:",
@@ -64,7 +73,7 @@ const plans = [
     name: "Scale",
     id: "SCALE",
     tagline: "For teams and pipelines",
-    price: "$39",
+    price: "₹3,299",
     period: "/mo",
     cta: "Get Scale",
     inherits: "Everything in Pro+, plus:",
@@ -98,27 +107,72 @@ export default function PricingPage() {
 
     setLoading(planId);
     try {
-      const res = await fetch("/api/stripe/checkout", {
+      // 1. Create subscription on backend
+      const res = await fetch("/api/razorpay/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan: planId }),
       });
       const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error(data.error || "Failed to create checkout session");
+
+      if (!data.subscriptionId) {
+        throw new Error(data.error || "Failed to create subscription");
       }
+
+      // 2. Open Razorpay Checkout modal
+      const options = {
+        key: data.keyId,
+        subscription_id: data.subscriptionId,
+        name: "CrawlMind",
+        description: `${planId} Monthly Subscription`,
+        handler: async (response: {
+          razorpay_payment_id: string;
+          razorpay_subscription_id: string;
+          razorpay_signature: string;
+        }) => {
+          // 3. Verify payment on backend
+          const verifyRes = await fetch("/api/razorpay/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ...response,
+              plan: planId,
+            }),
+          });
+          const verifyData = await verifyRes.json();
+
+          if (verifyData.success) {
+            router.push("/dashboard/settings?success=true");
+          } else {
+            alert("Payment verification failed. Please contact support.");
+          }
+        },
+        prefill: {
+          email: session.user.email,
+          name: session.user.name,
+        },
+        theme: {
+          color: "#06b6d4",
+        },
+        modal: {
+          ondismiss: () => {
+            setLoading(null);
+          },
+        },
+      };
+
+      const razorpay = new window.Razorpay(options);
+      razorpay.open();
     } catch (err) {
       console.error(err);
       alert("Something went wrong. Please try again.");
-    } finally {
       setLoading(null);
     }
   };
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" />
       <Navbar />
 
       {/* Background Glow */}

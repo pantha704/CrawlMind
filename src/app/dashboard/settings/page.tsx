@@ -51,8 +51,9 @@ export default async function SettingsPage() {
 
   const planMap: Record<string, { name: string; maxCrawls: number }> = {
     SPARK: { name: "Spark (Free)", maxCrawls: 2 },
-    PRO: { name: "Pro ($12/mo)", maxCrawls: 25 },
-    SCALE: { name: "Scale ($39/mo)", maxCrawls: 150 },
+    PRO: { name: "Pro (₹999/mo)", maxCrawls: 25 },
+    PRO_PLUS: { name: "Pro+ (₹1,999/mo)", maxCrawls: 75 },
+    SCALE: { name: "Scale (₹3,299/mo)", maxCrawls: 150 },
   };
 
   const currentPlan = planMap[dbUser.plan] || planMap.SPARK;
