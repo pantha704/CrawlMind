@@ -32,7 +32,7 @@ export async function GET() {
 
         try {
           const cfStatus = await getCrawlStatus(job.cfJobId);
-          
+
           if (cfStatus.success) {
             let newStatus = job.status;
             if (cfStatus.status === "completed") newStatus = "COMPLETED";
