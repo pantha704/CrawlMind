@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
         query,
         resolvedUrls: urls,
         status: "RUNNING",
-        config: crawlOpts as any,
+        config: crawlOpts as object,
         format: format || "markdown",
         pagesCrawled: 0,
       },

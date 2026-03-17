@@ -27,24 +27,24 @@ export async function GET(
             if (cfStatus.status === "completed") newStatus = "COMPLETED";
             if (cfStatus.status === "failed") newStatus = "FAILED";
 
-            const resultData = cfStatus.data as any;
+            const resultData = cfStatus.data as Record<string, unknown>;
             let pagesCount = job.pagesCrawled;
 
             if (Array.isArray(resultData)) {
-              pagesCount = resultData.filter((p: any) => p.status === "completed").length;
+              pagesCount = resultData.filter((p: Record<string, unknown>) => p.status === "completed").length;
             } else if (resultData?.pages_crawled) {
-              pagesCount = resultData.pages_crawled;
+              pagesCount = resultData.pages_crawled as number;
             } else if (resultData?.total_pages) {
-              pagesCount = resultData.total_pages;
+              pagesCount = resultData.total_pages as number;
             }
 
             const updatedJob = await prisma.crawlJob.update({
               where: { id: job.id },
               data: {
-                status: newStatus as any,
+                status: newStatus,
                 pagesCrawled: pagesCount,
-                resultData: cfStatus.status === "completed" ? resultData : job.resultData,
-                completedAt: cfStatus.status === "completed" ? new Date() : null,
+                resultData: cfStatus.status === "completed" ? (resultData as object) : (job.resultData ?? undefined),
+                completedAt: cfStatus.status === "completed" ? new Date() : undefined,
               },
             });
             return NextResponse.json({ job: updatedJob });

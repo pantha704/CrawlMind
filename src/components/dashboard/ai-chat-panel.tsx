@@ -15,10 +15,12 @@ interface AiChatPanelProps {
 export function AiChatPanel({ jobId }: AiChatPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  /* eslint-disable @typescript-eslint/no-explicit-any */
   const { messages, input, setInput, handleSubmit, isLoading } = useChat({
     api: "/api/chat",
     body: { jobId },
   } as any) as any;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -57,6 +59,7 @@ export function AiChatPanel({ jobId }: AiChatPanelProps) {
           </div>
         ) : (
           <div className="space-y-4">
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             {messages.map((msg: any) => (
               <div
                 key={msg.id}

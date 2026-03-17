@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { getCrawlStatus } from "@/lib/cloudflare";
+import type { CrawlJob } from "@prisma/client";
 
 export async function GET() {
   try {
@@ -27,7 +28,7 @@ export async function GET() {
 
     // Check Cloudflare for updates for each active job
     const updatedJobs = await Promise.all(
-      activeJobs.map(async (job) => {
+      activeJobs.map(async (job: CrawlJob) => {
         if (!job.cfJobId || job.cfJobId === "pending") return job;
 
         try {
@@ -38,27 +39,25 @@ export async function GET() {
             if (cfStatus.status === "completed") newStatus = "COMPLETED";
             if (cfStatus.status === "failed") newStatus = "FAILED";
 
-            // Extract pages crawled if available (Cloudflare usually depth/limit focused)
-            // We can estimate or use metadata if Cloudflare provides it
-            const resultData = cfStatus.data as any;
+            const resultData = cfStatus.data as Record<string, unknown>;
             let pagesCount = job.pagesCrawled;
 
             if (Array.isArray(resultData)) {
-              pagesCount = resultData.filter((p: any) => p.status === "completed").length;
+              pagesCount = resultData.filter((p: Record<string, unknown>) => p.status === "completed").length;
             } else if (resultData?.pages_crawled) {
-              pagesCount = resultData.pages_crawled;
+              pagesCount = resultData.pages_crawled as number;
             } else if (resultData?.total_pages) {
-              pagesCount = resultData.total_pages;
+              pagesCount = resultData.total_pages as number;
             }
 
             if (newStatus !== job.status || pagesCount !== job.pagesCrawled) {
               return await prisma.crawlJob.update({
                 where: { id: job.id },
                 data: {
-                  status: newStatus as any,
+                  status: newStatus,
                   pagesCrawled: pagesCount,
-                  resultData: cfStatus.status === "completed" ? resultData : job.resultData,
-                  completedAt: cfStatus.status === "completed" ? new Date() : null,
+                  resultData: cfStatus.status === "completed" ? (resultData as object) : (job.resultData ?? undefined),
+                  completedAt: cfStatus.status === "completed" ? new Date() : undefined,
                 },
               });
             }
