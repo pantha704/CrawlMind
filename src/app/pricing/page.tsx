@@ -4,15 +4,9 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useSession } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/landing/navbar";
-
-interface PlanFeature {
-  text: string;
-  isNew?: boolean;
-}
 
 const plans = [
   {
@@ -24,12 +18,12 @@ const plans = [
     cta: "Get Started Free",
     inherits: null,
     features: [
-      { text: "2 crawls per day", isNew: true },
-      { text: "Up to 30 pages per crawl", isNew: true },
-      { text: "Markdown + JSON output", isNew: true },
-      { text: "3 AI queries per crawl", isNew: true },
-      { text: "7-day result history", isNew: true },
-    ] as PlanFeature[],
+      "2 crawls per day",
+      "Up to 30 pages per crawl",
+      "Markdown + JSON output",
+      "3 AI queries per crawl",
+      "7-day result history",
+    ],
   },
   {
     name: "Pro",
@@ -41,14 +35,14 @@ const plans = [
     popular: true,
     inherits: "Everything in Spark, plus:",
     features: [
-      { text: "25 crawls per day", isNew: true },
-      { text: "Up to 500 pages per crawl", isNew: true },
-      { text: "Full JS rendering", isNew: true },
-      { text: "Unlimited AI queries", isNew: true },
-      { text: "AI-powered URL discovery", isNew: true },
-      { text: "Analytics dashboard", isNew: true },
-      { text: "90-day result history", isNew: true },
-    ] as PlanFeature[],
+      "25 crawls per day",
+      "Up to 500 pages per crawl",
+      "Full JS rendering",
+      "Unlimited AI queries",
+      "AI-powered URL discovery",
+      "Analytics dashboard",
+      "90-day result history",
+    ],
   },
   {
     name: "Pro+",
@@ -59,12 +53,12 @@ const plans = [
     cta: "Get Pro+",
     inherits: "Everything in Pro, plus:",
     features: [
-      { text: "75 crawls per day", isNew: true },
-      { text: "Up to 1,000 pages per crawl", isNew: true },
-      { text: "Priority crawl queue", isNew: true },
-      { text: "180-day result history", isNew: true },
-      { text: "Webhook delivery", isNew: true },
-    ] as PlanFeature[],
+      "75 crawls per day",
+      "Up to 1,000 pages per crawl",
+      "Priority crawl queue",
+      "180-day result history",
+      "Webhook delivery",
+    ],
   },
   {
     name: "Scale",
@@ -75,14 +69,14 @@ const plans = [
     cta: "Get Scale",
     inherits: "Everything in Pro+, plus:",
     features: [
-      { text: "150 crawls per day", isNew: true },
-      { text: "Up to 5,000 pages per crawl", isNew: true },
-      { text: "Scheduled & recurring crawls", isNew: true },
-      { text: "Team seats (up to 5)", isNew: true },
-      { text: "API access", isNew: true },
-      { text: "365-day result history", isNew: true },
-      { text: "Dedicated support", isNew: true },
-    ] as PlanFeature[],
+      "150 crawls per day",
+      "Up to 5,000 pages per crawl",
+      "Scheduled & recurring crawls",
+      "Team seats (up to 5)",
+      "API access",
+      "365-day result history",
+      "Dedicated support",
+    ],
   },
 ];
 
@@ -205,16 +199,11 @@ export default function PricingPage() {
                 )}
                 <ul className="space-y-2.5">
                   {plan.features.map((f) => (
-                    <li key={f.text} className="flex items-start gap-2.5 text-sm">
+                    <li key={f} className="flex items-start gap-2.5 text-sm">
                       <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                       <span className="text-foreground font-medium leading-tight">
-                        {f.text}
+                        {f}
                       </span>
-                      {f.isNew && plan.inherits && (
-                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 shrink-0 text-primary border-primary/30">
-                          NEW
-                        </Badge>
-                      )}
                     </li>
                   ))}
                 </ul>
@@ -226,4 +215,3 @@ export default function PricingPage() {
     </div>
   );
 }
-

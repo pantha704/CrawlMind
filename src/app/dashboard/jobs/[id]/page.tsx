@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -17,6 +17,7 @@ import {
   ExternalLink,
   ChevronLeft,
   ChevronRight,
+  RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AiChatPanel } from "@/components/dashboard/ai-chat-panel";
@@ -39,9 +40,11 @@ interface JobDetail {
 
 export default function JobDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const jobId = params.id as string;
   const [job, setJob] = useState<JobDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [retrying, setRetrying] = useState(false);
   const [activeTab, setActiveTab] = useState("chat");
   const [currentPage, setCurrentPage] = useState(0);
 
@@ -132,6 +135,34 @@ export default function JobDetailPage() {
     toast.success("Copied to clipboard");
   };
 
+  const handleRetry = async () => {
+    if (!job) return;
+    setRetrying(true);
+    try {
+      const config = job.config as Record<string, unknown>;
+      const res = await fetch("/api/crawl", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: job.query,
+          inputType: job.inputType,
+          depth: config?.depth || 2,
+          limit: config?.limit || 30,
+          format: job.format,
+          render: config?.render || false,
+        }),
+      });
+      if (!res.ok) throw new Error("Retry failed");
+      const data = await res.json();
+      toast.success("Crawl restarted!");
+      router.push(`/dashboard/jobs/${data.jobId}`);
+    } catch {
+      toast.error("Failed to retry crawl");
+    } finally {
+      setRetrying(false);
+    }
+  };
+
   const handleDownload = () => {
     const ext = job.format === "markdown" ? "md" : job.format === "html" ? "html" : "json";
     const exportStr = getFullExportString();
@@ -180,6 +211,22 @@ export default function JobDetailPage() {
         </div>
 
         <div className="flex gap-2 shrink-0">
+          {job.status === "FAILED" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRetry}
+              disabled={retrying}
+              className="text-amber-400 border-amber-400/30 hover:bg-amber-400/10"
+            >
+              {retrying ? (
+                <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+              ) : (
+                <RotateCcw className="w-4 h-4 mr-1.5" />
+              )}
+              Retry Crawl
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={handleCopy}>
             <Copy className="w-4 h-4 mr-1.5" />
             Copy
