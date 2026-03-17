@@ -131,12 +131,21 @@ export async function POST(req: NextRequest) {
     };
 
     const cfResponse = await startCrawlJob(crawlOpts);
+    console.log("[CRAWL] Cloudflare response:", JSON.stringify(cfResponse));
+
+    if (!cfResponse.success || !cfResponse.jobId) {
+      console.error("[CRAWL] Cloudflare crawl failed to start:", cfResponse.error);
+      return NextResponse.json(
+        { error: cfResponse.error || "Failed to start crawl — Cloudflare returned no job ID" },
+        { status: 502 }
+      );
+    }
 
     // Store job in DB
     const job = await prisma.crawlJob.create({
       data: {
         userId,
-        cfJobId: cfResponse.jobId || "pending",
+        cfJobId: cfResponse.jobId,
         inputType: inputType || "URL",
         query,
         resolvedUrls: urls,
@@ -146,6 +155,8 @@ export async function POST(req: NextRequest) {
         pagesCrawled: 0,
       },
     });
+
+    console.log("[CRAWL] Job created:", job.id, "cfJobId:", cfResponse.jobId);
 
     // AI Topic Classification (Optional background task)
     let topicCategory = "General";

@@ -42,8 +42,10 @@ export async function startCrawlJob(config: CrawlConfig): Promise<CrawlStartResu
   });
 
   const data = await response.json();
+  console.log("[CF] Start crawl response:", JSON.stringify(data, null, 2));
 
   if (!response.ok || !data.success) {
+    console.error("[CF] Start crawl failed:", data);
     return {
       success: false,
       jobId: null,
@@ -51,13 +53,22 @@ export async function startCrawlJob(config: CrawlConfig): Promise<CrawlStartResu
     };
   }
 
+  // Cloudflare may return the ID as `data.result` (string) or `data.result.id`
+  const jobId =
+    typeof data.result === "string"
+      ? data.result
+      : data.result?.id || data.result?.jobId || null;
+
+  console.log("[CF] Extracted jobId:", jobId);
+
   return {
     success: true,
-    jobId: data.result,
+    jobId,
   };
 }
 
 export async function getCrawlStatus(jobId: string): Promise<CrawlStatusResult> {
+  console.log("[CF] Checking status for jobId:", jobId);
   const response = await fetch(`${CF_BASE_URL}/crawl/${jobId}`, {
     method: "GET",
     headers: {
@@ -67,8 +78,10 @@ export async function getCrawlStatus(jobId: string): Promise<CrawlStatusResult> 
   });
 
   const data = await response.json();
+  console.log("[CF] Status response:", JSON.stringify(data, null, 2));
 
   if (!response.ok || !data.success) {
+    console.error("[CF] Status check failed:", data);
     return {
       success: false,
       status: "failed",
