@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Custom CrawlMind fields
+  plan             String   @default("SPARK") // SPARK, PRO, SCALE
+  stripeCustomerId String?  @unique
+  
+  // Relationships
+  sessions    Session[]
+  accounts    Account[]
+  crawlJobs   CrawlJob[]
+  aiChats     AiChat[]
+  searchEvents SearchEvent[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime
+  updatedAt             DateTime
+
+  @@map("account")
+}
+
+model Verification {
+  id         String    @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime?
+  updatedAt  DateTime?
+
+  @@map("verification")
+}
+
+// ---------------------------------------------------------------------------
+// CrawlMind Core Models
+// ---------------------------------------------------------------------------
+
+model CrawlJob {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cfJobId      String?
+  query        String    // original user query or URL
+  inputType    String    // "URL" or "AI"
+  resolvedUrls String[]  // resulting URLs to crawl
+  status       String    @default("QUEUED") // QUEUED, RUNNING, COMPLETED, FAILED
+  config       Json      // full cloudflare crawl config + AI config
+  resultData   Json?     // store the final aggregated result
+  pagesCrawled Int       @default(0)
+  format       String    @default("markdown") // html, markdown, json
+  error        String?   // error message if failed
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  completedAt  DateTime?
+  deletedAt    DateTime? // soft-delete for archiving
+  
+  aiChats      AiChat[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model AiChat {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  crawlJobId  String
+  crawlJob    CrawlJob @relation(fields: [crawlJobId], references: [id], onDelete: Cascade)
+  messages    Json     // Array of chat messages
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([crawlJobId])
+}
+
+model SearchEvent {
+  id            String   @id @default(cuid())
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  queryText     String
+  queryType     String   @default("URL") // URL or PLAINTEXT
+  topicCategory String?  // AI classified topic
+  resolvedUrls  String[]
+  aiModelUsed   String?
+  createdAt     DateTime @default(now())
+
+  @@index([queryText])
+  @@index([topicCategory])
+}

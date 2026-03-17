@@ -1,0 +1,8 @@
+src/app/api/crawl/route.ts(3,30): error TS2305: Module '"@/lib/cloudflare"' has no exported member 'CrawlOptions'.
+src/app/api/crawl/route.ts(103,11): error TS2353: Object literal may only specify known properties, and 'maxTokens' does not exist in type 'CallSettings & { system?: string | SystemModelMessage | SystemModelMessage[] | undefined; } & { prompt: string | ModelMessage[]; messages?: undefined; } & { ...; }'.
+src/app/api/webhooks/stripe/route.ts(54,18): error TS2322: Type 'string | Customer | DeletedCustomer' is not assignable to type 'string | StringNullableFilter<"User"> | null | undefined'.
+  Type 'Customer' is not assignable to type 'string | StringNullableFilter<"User"> | null | undefined'.
+src/components/dashboard/ai-chat-panel.tsx(4,25): error TS2307: Cannot find module 'ai/react' or its corresponding type declarations.
+src/components/dashboard/ai-chat-panel.tsx(60,28): error TS7006: Parameter 'msg' implicitly has an 'any' type.
+src/components/dashboard/topbar.tsx(53,32): error TS2322: Type '{ children: Element; asChild: true; }' is not assignable to type 'IntrinsicAttributes & Props<unknown>'.
+  Property 'asChild' does not exist on type 'IntrinsicAttributes & Props<unknown>'.

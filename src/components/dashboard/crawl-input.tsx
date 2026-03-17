@@ -1,0 +1,297 @@
+"use client";
+
+import { useState, useEffect, useMemo } from "react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import {
+  Globe,
+  Sparkles,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  Rocket,
+} from "lucide-react";
+import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
+
+interface PlanLimits {
+  plan: string;
+  maxPages: number;
+  allowAI: boolean;
+  allowJS: boolean;
+  crawlsToday: number;
+  maxCrawls: number;
+}
+
+interface CrawlInputProps {
+  onCrawlStarted?: () => void;
+}
+
+function looksLikeUrl(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  // Check each line — if any line starts with http or looks like a domain
+  const lines = trimmed.split(/[\n,]+/).map((l) => l.trim()).filter(Boolean);
+  return lines.some(
+    (line) =>
+      line.startsWith("http://") ||
+      line.startsWith("https://") ||
+      /^[\w-]+\.\w{2,}/.test(line) // e.g. "docs.cloudflare.com"
+  );
+}
+
+export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
+  const [query, setQuery] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [planLimits, setPlanLimits] = useState<PlanLimits | null>(null);
+
+  // Advanced params
+  const [depth, setDepth] = useState(2);
+  const [limit, setLimit] = useState(30);
+  const [format, setFormat] = useState("markdown");
+  const [jsRender, setJsRender] = useState(false);
+
+  // Auto-detect input type
+  const detectedMode = useMemo(() => {
+    return looksLikeUrl(query) ? "url" : "ai";
+  }, [query]);
+
+  // Fetch plan limits on mount
+  useEffect(() => {
+    async function fetchLimits() {
+      try {
+        const res = await fetch("/api/user/usage");
+        if (res.ok) {
+          const data = await res.json();
+          setPlanLimits(data);
+          setLimit(Math.min(30, data.maxPages));
+        }
+      } catch {
+        // Fallback: Spark defaults
+      }
+    }
+    fetchLimits();
+  }, []);
+
+  const maxPages = planLimits?.maxPages ?? 30;
+  const allowAI = planLimits?.allowAI ?? false;
+  const allowJS = planLimits?.allowJS ?? false;
+
+  const handleSubmit = async () => {
+    if (!query.trim()) {
+      toast.error("Please enter a URL or describe what to crawl");
+      return;
+    }
+
+    // If AI mode detected but plan doesn't allow it
+    if (detectedMode === "ai" && !allowAI) {
+      toast.error(
+        "AI-powered URL discovery requires Pro plan or higher. Try pasting a direct URL instead."
+      );
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/crawl", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: query.trim(),
+          inputType: detectedMode === "url" ? "URL" : "PLAINTEXT",
+          depth,
+          limit: Math.min(limit, maxPages),
+          format,
+          render: jsRender,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to start crawl");
+      }
+
+      toast.success("Crawl started! Watch the progress below.");
+      setQuery("");
+      onCrawlStarted?.();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Smart input — unified */}
+      <div className="relative">
+        <Textarea
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Paste a URL to crawl or describe what you're looking for..."
+          className="min-h-[100px] resize-none bg-card border-border/50 focus:border-primary pr-4 text-base"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+              handleSubmit();
+            }
+          }}
+        />
+        <div className="absolute bottom-3 right-3 flex items-center gap-2">
+          {query.trim() && (
+            <Badge
+              variant="outline"
+              className={`text-[10px] transition-all ${
+                detectedMode === "url"
+                  ? "text-primary border-primary/30"
+                  : "text-amber-400 border-amber-400/30"
+              }`}
+            >
+              {detectedMode === "url" ? (
+                <><Globe className="w-3 h-3 mr-1" /> URL detected</>
+              ) : (
+                <><Sparkles className="w-3 h-3 mr-1" /> AI discovery{!allowAI && " (Pro)"}</>
+              )}
+            </Badge>
+          )}
+          <span className="text-xs text-muted-foreground">⌘+Enter</span>
+        </div>
+      </div>
+
+      {/* Actions row */}
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {showAdvanced ? (
+            <ChevronUp className="w-4 h-4" />
+          ) : (
+            <ChevronDown className="w-4 h-4" />
+          )}
+          Advanced Parameters
+        </button>
+        <Button
+          onClick={handleSubmit}
+          disabled={loading || !query.trim()}
+          className="glow-cyan"
+          size="lg"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Starting...
+            </>
+          ) : (
+            <>
+              <Rocket className="w-4 h-4 mr-2" />
+              Start Crawl
+            </>
+          )}
+        </Button>
+      </div>
+
+      {/* Advanced panel */}
+      <AnimatePresence>
+        {showAdvanced && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-xl bg-card border border-border/50">
+              {/* Depth */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">
+                  Crawl Depth: {depth}
+                </Label>
+                <Slider
+                  value={[depth]}
+                  onValueChange={(v) => setDepth(Array.isArray(v) ? v[0] : v)}
+                  min={1}
+                  max={10}
+                  step={1}
+                />
+              </div>
+
+              {/* Page limit — bound to plan */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">
+                  Max Pages
+                  <span className="text-primary ml-1">(max {maxPages.toLocaleString()})</span>
+                </Label>
+                <Input
+                  type="number"
+                  value={limit}
+                  onChange={(e) => setLimit(Math.min(Number(e.target.value), maxPages))}
+                  min={1}
+                  max={maxPages}
+                  className="bg-secondary/50"
+                />
+              </div>
+
+              {/* Format */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">
+                  Output Format
+                </Label>
+                <Select value={format} onValueChange={(v) => { if (v) setFormat(v); }}>
+                  <SelectTrigger className="bg-secondary/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="markdown">Markdown</SelectItem>
+                    <SelectItem value="html">HTML</SelectItem>
+                    <SelectItem value="plaintext">Plaintext</SelectItem>
+                    <SelectItem value="readableHTML">Readable HTML</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* JS Rendering — bound to plan */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">
+                  JS Rendering
+                </Label>
+                <div className="flex items-center gap-2 pt-1">
+                  <Switch
+                    checked={jsRender}
+                    onCheckedChange={(v) => {
+                      if (v && !allowJS) {
+                        toast.error("JS rendering requires Pro plan or higher");
+                        return;
+                      }
+                      setJsRender(v);
+                    }}
+                    disabled={!allowJS}
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    {jsRender ? "On" : "Off"}
+                  </span>
+                  {!allowJS && (
+                    <Badge variant="outline" className="text-[10px]">
+                      Pro
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
