@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { getCrawlStatus } from "@/lib/cloudflare";
-import type { CrawlJob } from "@prisma/client";
 
 export async function GET() {
   try {
@@ -28,7 +27,7 @@ export async function GET() {
 
     // Check Cloudflare for updates for each active job
     const updatedJobs = await Promise.all(
-      activeJobs.map(async (job: CrawlJob) => {
+      activeJobs.map(async (job) => {
         if (!job.cfJobId || job.cfJobId === "pending") return job;
 
         try {
