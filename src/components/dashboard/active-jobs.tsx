@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { Loader2, CheckCircle2, XCircle, Clock, Trash2, Ban } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -100,9 +99,6 @@ export function ActiveJobs() {
       {jobs.map((job) => {
         const cfg = statusConfig[job.status] || statusConfig.QUEUED;
         const Icon = cfg.icon;
-        const progress = job.config?.limit
-          ? Math.min((job.pagesCrawled / job.config.limit) * 100, 100)
-          : 0;
 
         return (
           <div
@@ -147,13 +143,12 @@ export function ActiveJobs() {
               </div>
             </div>
 
-            {job.status === "RUNNING" && (
-              <div className="space-y-1.5">
-                <Progress value={progress} className="h-1.5" />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>{job.pagesCrawled} pages crawled</span>
-                  <span>{Math.round(progress)}%</span>
+            {(job.status === "RUNNING" || job.status === "QUEUED") && (
+              <div className="text-xs text-muted-foreground flex items-center gap-2">
+                <div className="h-1 flex-1 rounded-full bg-primary/10 overflow-hidden">
+                  <div className="h-full w-1/3 rounded-full bg-primary/40 animate-pulse" />
                 </div>
+                <span>Processing...</span>
               </div>
             )}
           </div>
