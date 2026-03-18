@@ -121,6 +121,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Generate include patterns to tell Cloudflare to not skip sub-links
+    let includePatterns: string[] | undefined;
+    try {
+      const urlObj = new URL(urls[0]);
+      includePatterns = [`${urlObj.origin}/*`];
+    } catch {
+      // In case of invalid URL fallback
+    }
+
     // Start crawl via Cloudflare
     const crawlOpts: CrawlConfig = {
       url: urls[0],
@@ -128,6 +137,10 @@ export async function POST(req: NextRequest) {
       depth: depth || 2,
       formats: [format || "markdown"],
       render: render || false,
+      options: {
+        includeSubdomains: true,
+        ...(includePatterns && { includePatterns }),
+      },
     };
 
     const cfResponse = await startCrawlJob(crawlOpts);
