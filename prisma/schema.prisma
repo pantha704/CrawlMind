@@ -86,6 +86,7 @@ model CrawlJob {
   userId       String
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   cfJobId      String?
+  cfAccountId  String?   // The specific CF account ID used for this job
   query        String    // original user query or URL
   inputType    String    // "URL" or "AI"
   resolvedUrls String[]  // resulting URLs to crawl

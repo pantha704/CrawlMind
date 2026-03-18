@@ -164,6 +164,7 @@ export async function POST(req: NextRequest) {
       data: {
         userId,
         cfJobId: cfResponse.jobId,
+        cfAccountId: cfResponse.accountId,
         inputType: inputType || "URL",
         query,
         resolvedUrls: urls,

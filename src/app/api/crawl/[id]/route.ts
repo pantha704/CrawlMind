@@ -21,7 +21,7 @@ export async function GET(
     if (job.status === "RUNNING" || job.status === "QUEUED") {
       if (job.cfJobId && job.cfJobId !== "pending") {
         try {
-          const cfStatus = await getCrawlStatus(job.cfJobId);
+          const cfStatus = await getCrawlStatus(job.cfJobId, job.cfAccountId);
           if (cfStatus.success) {
             let newStatus = job.status;
             if (cfStatus.status === "completed") newStatus = "COMPLETED";

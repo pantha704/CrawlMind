@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: "no_cf_job" });
     }
 
-    const cfStatus = await getCrawlStatus(job.cfJobId);
+    const cfStatus = await getCrawlStatus(job.cfJobId, job.cfAccountId);
 
     if (!cfStatus.success) {
       // Re-queue with longer delay
