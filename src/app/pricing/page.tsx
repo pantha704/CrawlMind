@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useSession } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/landing/navbar";
+import { toast } from "sonner";
 import Script from "next/script";
 
 declare global {
@@ -139,12 +140,16 @@ export default function PricingPage() {
               plan: planId,
             }),
           });
-          const verifyData = await verifyRes.json();
-
-          if (verifyData.success) {
-            router.push("/dashboard/settings?success=true");
+          if (verifyRes.ok) {
+            const data = await verifyRes.json();
+            toast.success("Subscription successful!");
+            if (data.invoiceId) {
+              router.push(`/thank-you?invoice=${data.invoiceId}`);
+            } else {
+              router.push("/dashboard/settings");
+            }
           } else {
-            alert("Payment verification failed. Please contact support.");
+            toast.error("Payment verification failed");
           }
         },
         prefill: {

@@ -27,6 +27,7 @@ model User {
   crawlJobs   CrawlJob[]
   aiChats     AiChat[]
   searchEvents SearchEvent[]
+  invoices    Invoice[]
 
   @@map("user")
 }
@@ -132,4 +133,20 @@ model SearchEvent {
 
   @@index([queryText])
   @@index([topicCategory])
+}
+
+model Invoice {
+  id                     String   @id @default(cuid())
+  userId                 String
+  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  razorpayPaymentId      String   @unique
+  razorpaySubscriptionId String
+  plan                   String   // PRO, PRO_PLUS, SCALE
+  amountPaise            Int      // amount in paise
+  currency               String   @default("INR")
+  status                 String   @default("PAID") // PAID, REFUNDED
+  invoiceNumber          String   @unique // e.g. "CM-20260318-001"
+  createdAt              DateTime @default(now())
+  
+  @@index([userId])
 }

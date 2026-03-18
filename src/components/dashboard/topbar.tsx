@@ -31,6 +31,8 @@ export function Topbar({ onMenuClick }: TopbarProps) {
     ? session.user.email.charAt(0).toUpperCase()
     : "?";
 
+  const userPlan = (session?.user as { plan?: string })?.plan || "FREE";
+
   useEffect(() => {
     fetch("/api/user/usage")
       .then((r) => r.json())
@@ -82,16 +84,26 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                 {userInitial}
               </AvatarFallback>
             </Avatar>
+            {/* Plan Badge */}
+            {userPlan !== "FREE" && (
+              <div className="absolute -bottom-1 -right-1 flex h-[14px] items-center justify-center rounded-sm bg-primary px-1 text-[8px] font-bold text-primary-foreground shadow-sm ring-1 ring-background">
+                {userPlan === "PRO" ? "PRO" : userPlan === "PRO_PLUS" ? "PRO+" : "SCALE"}
+              </div>
+            )}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuItem>
               <Link href="/dashboard/settings" className="flex w-full">Settings</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Link href="/pricing" className="flex w-full">Upgrade Plan</Link>
-            </DropdownMenuItem>
+            
+            {userPlan !== "SCALE" && (
+              <DropdownMenuItem>
+                <Link href="/pricing" className="flex w-full">Upgrade Plan</Link>
+              </DropdownMenuItem>
+            )}
+            
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive" onClick={handleLogout}>
+            <DropdownMenuItem className="text-destructive cursor-pointer" onClick={handleLogout}>
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>
