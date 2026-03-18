@@ -133,14 +133,18 @@ export async function POST(req: NextRequest) {
     // Start crawl via Cloudflare
     const crawlOpts: CrawlConfig = {
       url: urls[0],
+      source: body.source || "all",
       limit: limit || 30,
       depth: depth || 2,
       formats: [format || "markdown"],
       render: render || false,
+      ...(body.maxAge !== undefined && { maxAge: body.maxAge }),
+      ...(body.modifiedSince && { modifiedSince: body.modifiedSince }),
       options: {
         includeSubdomains: includeSubdomains ?? true,
         includeExternalLinks: includeExternalLinks ?? false,
         ...(includePatterns && { includePatterns }),
+        ...(body.excludePatterns && { excludePatterns: body.excludePatterns }),
       },
     };
 

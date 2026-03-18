@@ -4,6 +4,7 @@ const CF_BASE_URL = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_
 
 export interface CrawlConfig {
   url: string;
+  source?: "all" | "sitemaps" | "links";
   limit?: number;
   depth?: number;
   formats?: ("html" | "markdown" | "json")[];

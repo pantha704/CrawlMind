@@ -88,6 +88,12 @@ export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
   const [includeSubdomains, setIncludeSubdomains] = useState(true);
   const [includeExternalLinks, setIncludeExternalLinks] = useState(false);
 
+  // Deep Advanced
+  const [source, setSource] = useState("all");
+  const [excludePatterns, setExcludePatterns] = useState("");
+  const [maxAge, setMaxAge] = useState(86400); // 24 hours
+  const [modifiedSince, setModifiedSince] = useState("");
+
   // Auto-detect input type
   const detectedMode = useMemo(() => {
     return looksLikeUrl(query) ? "url" : "ai";
@@ -142,6 +148,10 @@ export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
           render: jsRender,
           includeSubdomains,
           includeExternalLinks,
+          source,
+          excludePatterns: excludePatterns.trim() ? excludePatterns.split(",").map(p => p.trim()) : undefined,
+          maxAge: maxAge,
+          modifiedSince: modifiedSince ? new Date(modifiedSince).toISOString() : undefined,
         }),
       });
 
@@ -356,6 +366,72 @@ export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
                       {includeExternalLinks ? "On" : "Off"}
                     </span>
                   </div>
+                </div>
+              </div>
+
+              {/* Row 3: Deep advanced controls */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-2 border-t border-border/30">
+                {/* Source */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground flex items-center">
+                    Crawl Source
+                    <InfoTip text="How the crawler finds new URLs. 'All' uses links and sitemaps. 'Links' only follows <a> tags. 'Sitemaps' only uses XML sitemaps." />
+                  </Label>
+                  <Select value={source} onValueChange={(v) => { if (v) setSource(v); }}>
+                    <SelectTrigger className="bg-secondary/50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All (Links & Sitemaps)</SelectItem>
+                      <SelectItem value="links">Links Only</SelectItem>
+                      <SelectItem value="sitemaps">Sitemaps Only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Exclude Patterns */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground flex items-center">
+                    Exclude Patterns
+                    <InfoTip text="Comma-separated wildcard patterns. The crawler will explicitly skip these URLs (e.g. */blog/*, **/*.pdf)." />
+                  </Label>
+                  <Input
+                    type="text"
+                    placeholder="*/blog/*, **/*.pdf"
+                    value={excludePatterns}
+                    onChange={(e) => setExcludePatterns(e.target.value)}
+                    className="bg-secondary/50"
+                  />
+                </div>
+
+                {/* Max Cache Age */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground flex items-center">
+                    Max Cache Age (seconds)
+                    <InfoTip text="How long the crawler can use a previously cached version of a page before forcibly re-fetching it from the server." />
+                  </Label>
+                  <Input
+                    type="number"
+                    value={maxAge}
+                    onChange={(e) => setMaxAge(Number(e.target.value))}
+                    min={0}
+                    max={604800} // 7 days
+                    className="bg-secondary/50"
+                  />
+                </div>
+
+                {/* Modified Since */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground flex items-center">
+                    Modified Since
+                    <InfoTip text="Only crawl pages that have changed since this date. Great for setting up incremental/recurring crawls." />
+                  </Label>
+                  <Input
+                    type="datetime-local"
+                    value={modifiedSince}
+                    onChange={(e) => setModifiedSince(e.target.value)}
+                    className="bg-secondary/50"
+                  />
                 </div>
               </div>
             </div>
