@@ -86,7 +86,7 @@ export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
   const [format, setFormat] = useState("markdown");
   const [jsRender, setJsRender] = useState(false);
   const [includeSubdomains, setIncludeSubdomains] = useState(true);
-  const [includeExternalLinks, setIncludeExternalLinks] = useState(false);
+  const [includeExternalLinks, setIncludeExternalLinks] = useState(true);
 
   // Deep Advanced
   const [source, setSource] = useState("all");
@@ -255,7 +255,7 @@ export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground flex items-center">
                     Crawl Depth: {depth}
-                    <InfoTip text="How many link levels deep the crawler will follow from the starting URL. Higher depth = more pages discovered." />
+                    <InfoTip text="How many link levels deep the crawler will follow from the starting URL. Note: If depth is 2 or higher, consider turning on 'Follow External Links' to reach those pages." />
                   </Label>
                   <Slider
                     value={[depth]}
