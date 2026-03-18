@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCrawlStatus } from "@/lib/cloudflare";
+import { getCrawlStatus, getCrawlResults } from "@/lib/cloudflare";
 import { scheduleCrawlSync } from "@/lib/qstash";
 
 /**
  * QStash webhook: Checks Cloudflare crawl status and syncs to DB.
- * If still pending, re-queues itself with exponential backoff.
+ * Uses a two-step approach:
+ *  1. Lightweight status check (fast, no records data)
+ *  2. If completed, fetch full results separately
+ * This avoids Vercel 30s timeouts on large crawl result payloads.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -16,40 +19,46 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing jobId" }, { status: 400 });
     }
 
-    const job = await prisma.crawlJob.findUnique({
-      where: { id: jobId },
-    });
+    const job = await prisma.crawlJob.findUnique({ where: { id: jobId } });
 
     if (!job) {
       return NextResponse.json({ error: "Job not found" }, { status: 404 });
     }
 
-    // Already completed or failed — no action needed
+    // Already done — skip
     if (job.status === "COMPLETED" || job.status === "FAILED") {
       return NextResponse.json({ status: "already_done" });
     }
 
-    // Check Cloudflare status
     if (!job.cfJobId || job.cfJobId === "pending") {
       return NextResponse.json({ status: "no_cf_job" });
     }
 
+    // Step 1: Lightweight status check (no page records, fast)
     const cfStatus = await getCrawlStatus(job.cfJobId, job.cfAccountId);
 
     if (!cfStatus.success) {
-      // Re-queue with longer delay
       await scheduleCrawlSync(jobId, 60);
       return NextResponse.json({ status: "retry_scheduled" });
     }
 
     if (cfStatus.status === "completed") {
-      const resultData = cfStatus.data;
+      // Step 2: Fetch full results (may be large)
+      // If this times out, we still mark COMPLETED so job isn't stuck forever.
+      let resultData: unknown = null;
       let pagesCount = 0;
 
-      if (Array.isArray(resultData)) {
-        pagesCount = resultData.filter(
-          (p: Record<string, unknown>) => p.status === "completed"
-        ).length;
+      try {
+        const results = await getCrawlResults(job.cfJobId, job.cfAccountId);
+        if (results.success && results.records) {
+          resultData = results.records;
+          pagesCount = (results.records as Record<string, unknown>[]).filter(
+            (p) => p.status === "completed"
+          ).length;
+        }
+      } catch {
+        // Data fetch failed/timed out — still mark completed so job isn't stuck
+        console.error("[crawl-sync] Result fetch failed, marking completed without data");
       }
 
       await prisma.crawlJob.update({
@@ -68,26 +77,17 @@ export async function POST(req: NextRequest) {
     if (cfStatus.status === "failed") {
       await prisma.crawlJob.update({
         where: { id: jobId },
-        data: {
-          status: "FAILED",
-          error: "Cloudflare crawl failed",
-        },
+        data: { status: "FAILED", error: "Cloudflare crawl failed" },
       });
       return NextResponse.json({ status: "failed" });
     }
 
-    // Still pending — re-queue with exponential backoff
-    // Increase delay: 30s → 60s → 120s → 240s (max 5 min)
-    const currentDelay = 30;
-    const nextDelay = Math.min(currentDelay * 2, 300);
-    await scheduleCrawlSync(jobId, nextDelay);
+    // Still running — re-queue
+    await scheduleCrawlSync(jobId, 60);
+    return NextResponse.json({ status: "pending", nextCheck: 60 });
 
-    return NextResponse.json({ status: "pending", nextCheck: nextDelay });
   } catch (err) {
     console.error("Crawl sync webhook error:", err);
-    return NextResponse.json(
-      { error: "Webhook failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Webhook failed" }, { status: 500 });
   }
 }
