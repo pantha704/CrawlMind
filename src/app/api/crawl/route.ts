@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     const userId = session.user.id;
 
     const body = await req.json();
-    const { query, inputType, depth, format, render } = body;
+    const { query, inputType, depth, format, render, includeSubdomains, includeExternalLinks } = body;
     let limit = body.limit;
 
     if (!query) {
@@ -138,7 +138,8 @@ export async function POST(req: NextRequest) {
       formats: [format || "markdown"],
       render: render || false,
       options: {
-        includeSubdomains: true,
+        includeSubdomains: includeSubdomains ?? true,
+        includeExternalLinks: includeExternalLinks ?? false,
         ...(includePatterns && { includePatterns }),
       },
     };

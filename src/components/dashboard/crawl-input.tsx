@@ -16,15 +16,37 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
+import {
   Globe,
   Sparkles,
   ChevronDown,
   ChevronUp,
   Loader2,
   Rocket,
+  Info,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+
+function InfoTip({ text }: { text: string }) {
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger
+          render={<Info className="w-3.5 h-3.5 text-muted-foreground/60 hover:text-primary cursor-help transition-colors inline ml-1" />}
+        />
+        <TooltipContent side="top" className="max-w-[220px] text-xs leading-relaxed">
+          {text}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
 
 interface PlanLimits {
   plan: string;
@@ -63,6 +85,8 @@ export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
   const [limit, setLimit] = useState(30);
   const [format, setFormat] = useState("markdown");
   const [jsRender, setJsRender] = useState(false);
+  const [includeSubdomains, setIncludeSubdomains] = useState(true);
+  const [includeExternalLinks, setIncludeExternalLinks] = useState(false);
 
   // Auto-detect input type
   const detectedMode = useMemo(() => {
@@ -116,6 +140,8 @@ export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
           limit: Math.min(limit, maxPages),
           format,
           render: jsRender,
+          includeSubdomains,
+          includeExternalLinks,
         }),
       });
 
@@ -212,80 +238,124 @@ export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-xl bg-card border border-border/50">
-              {/* Depth */}
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">
-                  Crawl Depth: {depth}
-                </Label>
-                <Slider
-                  value={[depth]}
-                  onValueChange={(v) => setDepth(Array.isArray(v) ? v[0] : v)}
-                  min={1}
-                  max={10}
-                  step={1}
-                />
-              </div>
-
-              {/* Page limit — bound to plan */}
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">
-                  Max Pages
-                  <span className="text-primary ml-1">(max {maxPages.toLocaleString()})</span>
-                </Label>
-                <Input
-                  type="number"
-                  value={limit}
-                  onChange={(e) => setLimit(Math.min(Number(e.target.value), maxPages))}
-                  min={1}
-                  max={maxPages}
-                  className="bg-secondary/50"
-                />
-              </div>
-
-              {/* Format */}
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">
-                  Output Format
-                </Label>
-                <Select value={format} onValueChange={(v) => { if (v) setFormat(v); }}>
-                  <SelectTrigger className="bg-secondary/50">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="markdown">Markdown</SelectItem>
-                    <SelectItem value="html">HTML</SelectItem>
-                    <SelectItem value="plaintext">Plaintext</SelectItem>
-                    <SelectItem value="readableHTML">Readable HTML</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* JS Rendering — bound to plan */}
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">
-                  JS Rendering
-                </Label>
-                <div className="flex items-center gap-2 pt-1">
-                  <Switch
-                    checked={jsRender}
-                    onCheckedChange={(v) => {
-                      if (v && !allowJS) {
-                        toast.error("JS rendering requires Pro plan or higher");
-                        return;
-                      }
-                      setJsRender(v);
-                    }}
-                    disabled={!allowJS}
+            <div className="space-y-4 p-4 rounded-xl bg-card border border-border/50">
+              {/* Row 1: Core params */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                {/* Depth */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground flex items-center">
+                    Crawl Depth: {depth}
+                    <InfoTip text="How many link levels deep the crawler will follow from the starting URL. Higher depth = more pages discovered." />
+                  </Label>
+                  <Slider
+                    value={[depth]}
+                    onValueChange={(v) => setDepth(Array.isArray(v) ? v[0] : v)}
+                    min={1}
+                    max={10}
+                    step={1}
                   />
-                  <span className="text-xs text-muted-foreground">
-                    {jsRender ? "On" : "Off"}
-                  </span>
-                  {!allowJS && (
-                    <Badge variant="outline" className="text-[10px]">
-                      Pro
-                    </Badge>
-                  )}
+                </div>
+
+                {/* Page limit */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground flex items-center">
+                    Max Pages
+                    <span className="text-primary ml-1">(max {maxPages.toLocaleString()})</span>
+                    <InfoTip text="Maximum number of pages to crawl. The crawler stops after reaching this limit, even if there are more links to follow." />
+                  </Label>
+                  <Input
+                    type="number"
+                    value={limit}
+                    onChange={(e) => setLimit(Math.min(Number(e.target.value), maxPages))}
+                    min={1}
+                    max={maxPages}
+                    className="bg-secondary/50"
+                  />
+                </div>
+
+                {/* Format */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground flex items-center">
+                    Output Format
+                    <InfoTip text="The format of crawled page content. Markdown is clean and readable, HTML preserves structure, Plaintext strips all formatting." />
+                  </Label>
+                  <Select value={format} onValueChange={(v) => { if (v) setFormat(v); }}>
+                    <SelectTrigger className="bg-secondary/50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="markdown">Markdown</SelectItem>
+                      <SelectItem value="html">HTML</SelectItem>
+                      <SelectItem value="plaintext">Plaintext</SelectItem>
+                      <SelectItem value="readableHTML">Readable HTML</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* JS Rendering */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground flex items-center">
+                    JS Rendering
+                    <InfoTip text="Enable to render JavaScript-heavy pages (SPAs, React sites). Slower but captures dynamically loaded content. Requires Pro plan." />
+                  </Label>
+                  <div className="flex items-center gap-2 pt-1">
+                    <Switch
+                      checked={jsRender}
+                      onCheckedChange={(v) => {
+                        if (v && !allowJS) {
+                          toast.error("JS rendering requires Pro plan or higher");
+                          return;
+                        }
+                        setJsRender(v);
+                      }}
+                      disabled={!allowJS}
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {jsRender ? "On" : "Off"}
+                    </span>
+                    {!allowJS && (
+                      <Badge variant="outline" className="text-[10px]">
+                        Pro
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 2: Scope controls */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-border/30">
+                {/* Include Subdomains */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground flex items-center">
+                    Include Subdomains
+                    <InfoTip text="When enabled, the crawler will also follow links to subdomains of the target site (e.g. docs.example.com when crawling example.com)." />
+                  </Label>
+                  <div className="flex items-center gap-2 pt-1">
+                    <Switch
+                      checked={includeSubdomains}
+                      onCheckedChange={setIncludeSubdomains}
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {includeSubdomains ? "On" : "Off"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Include External Links */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground flex items-center">
+                    Follow External Links
+                    <InfoTip text="When enabled, the crawler will follow links to other domains found on the page. Useful for research but may result in unrelated content." />
+                  </Label>
+                  <div className="flex items-center gap-2 pt-1">
+                    <Switch
+                      checked={includeExternalLinks}
+                      onCheckedChange={setIncludeExternalLinks}
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {includeExternalLinks ? "On" : "Off"}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
