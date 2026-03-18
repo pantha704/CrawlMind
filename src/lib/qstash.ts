@@ -13,7 +13,13 @@ export async function scheduleCrawlSync(
   jobId: string,
   delaySec: number = 30
 ) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001";
+  // VERCEL_URL is automatically set by Vercel to the deployment URL (e.g. crawl-mind.vercel.app)
+  // We prefer the explicit APP_URL but fall back to VERCEL_URL so QStash never calls localhost in prod.
+  const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.startsWith("http://localhost")
+    ? (vercelUrl ?? process.env.NEXT_PUBLIC_APP_URL)
+    : (process.env.NEXT_PUBLIC_APP_URL ?? vercelUrl ?? "http://localhost:3001");
+
 
   await qstashClient.publishJSON({
     url: `${appUrl}/api/webhooks/crawl-sync`,
