@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,8 @@ import {
   ChevronLeft,
   ChevronRight,
   RotateCcw,
+  RefreshCw,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AiChatPanel } from "@/components/dashboard/ai-chat-panel";
@@ -45,8 +47,32 @@ export default function JobDetailPage() {
   const [job, setJob] = useState<JobDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(false);
+  const [fetchingResults, setFetchingResults] = useState(false);
+  const [resultsError, setResultsError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("chat");
   const [currentPage, setCurrentPage] = useState(0);
+
+  const fetchResults = useCallback(async () => {
+    if (!jobId) return;
+    setFetchingResults(true);
+    setResultsError(null);
+    try {
+      const res = await fetch(`/api/crawl/${jobId}/results`);
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setJob((prev) => prev ? { ...prev, resultData: data.records, pagesCrawled: data.pagesCrawled ?? prev.pagesCrawled } : prev);
+        toast.success(`Loaded ${data.records?.length ?? 0} pages!`);
+      } else {
+        setResultsError(data.error || "Failed to fetch results from Cloudflare");
+        toast.error(data.error || "Failed to fetch results");
+      }
+    } catch {
+      setResultsError("Network error fetching results");
+      toast.error("Failed to fetch results");
+    } finally {
+      setFetchingResults(false);
+    }
+  }, [jobId]);
 
   useEffect(() => {
     async function fetchJob() {
@@ -55,6 +81,11 @@ export default function JobDetailPage() {
         if (res.ok) {
           const data = await res.json();
           setJob(data.job);
+          // Auto-fetch results if job is completed but resultData is missing
+          if (data.job?.status === "COMPLETED" && (!data.job?.resultData || !Array.isArray(data.job?.resultData) || (data.job?.resultData as unknown[]).length === 0)) {
+            // slight delay to let UI render first
+            setTimeout(() => fetchResults(), 300);
+          }
         }
       } catch {
         toast.error("Failed to load job details");
@@ -63,7 +94,7 @@ export default function JobDetailPage() {
       }
     }
     fetchJob();
-  }, [jobId]);
+  }, [jobId, fetchResults]);
 
   // Parse result pages lazily — separate completed vs skipped
   const { completedPages, skippedCount } = useMemo(() => {
@@ -253,6 +284,33 @@ export default function JobDetailPage() {
         </TabsContent>
 
         <TabsContent value="results" className="mt-0">
+          {/* 7-day expiry warning for free plan users */}
+          {job.status === "COMPLETED" && (
+            <div className="flex items-center gap-2 text-xs text-yellow-500 bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-3 py-2 mb-3">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+              <span>Results are stored for <strong>7 days</strong>. Download your data before it expires.</span>
+            </div>
+          )}
+
+          {/* Loading state while fetching from Cloudflare */}
+          {fetchingResults && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3 animate-pulse">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Fetching results from Cloudflare — this can take up to 30s for large crawls…
+            </div>
+          )}
+
+          {/* Error state with retry */}
+          {resultsError && !fetchingResults && (
+            <div className="flex items-center gap-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2 mb-3">
+              <XCircle className="w-4 h-4 shrink-0" />
+              <span>{resultsError}</span>
+              <Button variant="outline" size="sm" onClick={fetchResults} className="ml-auto h-7 text-xs">
+                <RefreshCw className="w-3 h-3 mr-1" /> Retry
+              </Button>
+            </div>
+          )}
+
           {/* Per-page navigation for crawled records */}
           {completedPages.length > 1 && (
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 px-1 gap-2">
@@ -294,6 +352,12 @@ export default function JobDetailPage() {
                 <p className="font-medium">Error</p>
                 <p>{job.error}</p>
               </div>
+            ) : fetchingResults ? (
+              <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <p className="text-sm">Downloading crawled pages from Cloudflare…</p>
+                <p className="text-xs">Large crawls may take up to 30 seconds</p>
+              </div>
             ) : currentPageContent ? (
               job.format === "markdown" ? (
                 <MarkdownViewer content={currentPageContent} />
@@ -302,11 +366,16 @@ export default function JobDetailPage() {
                   {currentPageContent}
                 </pre>
               )
-            ) : (
-              <p className="text-muted-foreground text-sm">
-                No results yet — crawl may still be in progress.
-              </p>
-            )}
+            ) : !resultsError ? (
+              <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
+                <p className="text-sm">No results yet — crawl may still be in progress.</p>
+                {job.status === "COMPLETED" && (
+                  <Button variant="outline" size="sm" onClick={fetchResults}>
+                    <RefreshCw className="w-4 h-4 mr-1.5" /> Load Results
+                  </Button>
+                )}
+              </div>
+            ) : null}
           </ScrollArea>
         </TabsContent>
 
