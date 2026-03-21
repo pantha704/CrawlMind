@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -14,20 +15,25 @@ interface AiChatPanelProps {
 
 export function AiChatPanel({ jobId }: AiChatPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [input, setInput] = useState("");
 
-  /* eslint-disable @typescript-eslint/no-explicit-any */
-  const { messages, input, setInput, append, isLoading } = useChat({
-    api: "/api/chat",
-    body: { jobId },
-  } as any) as any;
-  /* eslint-enable @typescript-eslint/no-explicit-any */
+  const { messages, sendMessage, status } = useChat({
+    transport: new DefaultChatTransport({
+      api: "/api/chat",
+      body: { jobId },
+    }),
+  });
+
+  // 'submitted' = request sent, 'streaming' = response coming in
+  const isLoading = status === "submitted" || status === "streaming";
 
   const onSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!input.trim() || isLoading) return;
-    
-    append({ role: "user", content: input });
+
+    const text = input;
     setInput("");
+    sendMessage({ text });
   };
 
   // Auto-scroll to bottom
@@ -67,39 +73,46 @@ export function AiChatPanel({ jobId }: AiChatPanelProps) {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-            {messages.map((msg: any) => (
-              <div
-                key={msg.id}
-                className={`flex gap-3 ${
-                  msg.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
-                {msg.role === "assistant" && (
-                  <Avatar className="w-8 h-8 shrink-0">
-                    <AvatarFallback className="bg-primary/20 text-primary text-xs">
-                      <Bot className="w-4 h-4" />
-                    </AvatarFallback>
-                  </Avatar>
-                )}
+            {messages.map((msg) => {
+              // Extract text content from parts
+              const textContent = msg.parts
+                .filter((p) => p.type === "text")
+                .map((p) => (p as { type: "text"; text: string }).text)
+                .join("");
+
+              return (
                 <div
-                  className={`max-w-[90%] sm:max-w-[80%] rounded-xl px-4 py-3 text-sm leading-relaxed ${
-                    msg.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-secondary/50 text-foreground"
+                  key={msg.id}
+                  className={`flex gap-3 ${
+                    msg.role === "user" ? "justify-end" : "justify-start"
                   }`}
                 >
-                  <div className="whitespace-pre-wrap">{msg.content}</div>
+                  {msg.role === "assistant" && (
+                    <Avatar className="w-8 h-8 shrink-0">
+                      <AvatarFallback className="bg-primary/20 text-primary text-xs">
+                        <Bot className="w-4 h-4" />
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
+                  <div
+                    className={`max-w-[90%] sm:max-w-[80%] rounded-xl px-4 py-3 text-sm leading-relaxed ${
+                      msg.role === "user"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary/50 text-foreground"
+                    }`}
+                  >
+                    <div className="whitespace-pre-wrap">{textContent}</div>
+                  </div>
+                  {msg.role === "user" && (
+                    <Avatar className="w-8 h-8 shrink-0">
+                      <AvatarFallback className="bg-secondary text-muted-foreground text-xs">
+                        <User className="w-4 h-4" />
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
                 </div>
-                {msg.role === "user" && (
-                  <Avatar className="w-8 h-8 shrink-0">
-                    <AvatarFallback className="bg-secondary text-muted-foreground text-xs">
-                      <User className="w-4 h-4" />
-                    </AvatarFallback>
-                  </Avatar>
-                )}
-              </div>
-            ))}
+              );
+            })}
             {isLoading && (
               <div className="flex gap-3">
                 <Avatar className="w-8 h-8 shrink-0">
