@@ -131,7 +131,7 @@ export function PricingPreview() {
                 <span className="text-muted-foreground">{plan.period}</span>
               </div>
 
-              <Link href="/signup">
+              <Link href="/pricing">
                 <Button
                   variant={plan.ctaVariant}
                   className={`w-full mb-8 ${plan.popular ? "glow-cyan" : ""}`}
