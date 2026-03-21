@@ -45,41 +45,45 @@ export async function POST(req: NextRequest) {
     }
 
     if (cfStatus.status === "completed") {
-      // Step 2: Fetch full results in the background
-      // Since maxDuration is 60s, Vercel won't murder this function while we wait
-      // for Cloudflare's massive JSON payload.
-      let resultData: unknown = null;
-      let pagesCount = 0;
-
-      try {
-        const results = await getCrawlResults(job.cfJobId, job.cfAccountId);
-        if (results.success && results.records) {
-          resultData = results.records;
-          pagesCount = (results.records as Record<string, unknown>[]).filter(
-            (p) => p.status === "completed"
-          ).length;
-        } else {
-          console.error(`[crawl-sync] Fetch failed for ${jobId}:`, results.error);
-          await scheduleCrawlSync(jobId, 60);
-          return NextResponse.json({ status: "retry_scheduled_due_to_fetch_error" });
-        }
-      } catch (err) {
-        console.error("[crawl-sync] Result fetch threw error:", err);
-        await scheduleCrawlSync(jobId, 60);
-        return NextResponse.json({ status: "retry_scheduled_due_to_exception" });
-      }
-
+      // 1. Mark as COMPLETED immediately!
+      // This guarantees the job never gets stuck in RUNNING even if the background 
+      // payload download fails or exceeds Vercel's strict 60s function timeout.
       await prisma.crawlJob.update({
         where: { id: jobId },
         data: {
           status: "COMPLETED",
-          pagesCrawled: pagesCount,
-          resultData: resultData as object,
           completedAt: new Date(),
         },
       });
 
-      return NextResponse.json({ status: "completed", pages: pagesCount });
+      // 2. Attempt Step 2: Fetch full results in the background
+      // If this takes >60s, Vercel kills this lambda and throws a 504.
+      // But because we already saved the DB as COMPLETED above, the user 
+      // will gracefully fall back to the client-side streaming proxy!
+      try {
+        const results = await getCrawlResults(job.cfJobId, job.cfAccountId);
+        if (results.success && results.records) {
+          const pagesCount = (results.records as Record<string, unknown>[]).filter(
+            (p) => p.status === "completed"
+          ).length;
+
+          // 3. Update the DB again with the actual heavy payload
+          await prisma.crawlJob.update({
+            where: { id: jobId },
+            data: {
+              pagesCrawled: pagesCount,
+              resultData: results.records as object,
+            },
+          });
+          return NextResponse.json({ status: "completed", pages: pagesCount });
+        }
+      } catch (err) {
+        console.error("[crawl-sync] Result fetch threw error (or timed out):", err);
+        // It's fine to swallow this error. The job is COMPLETED, resultData is null.
+        // The frontend streaming proxy (/api/crawl/[id]/results) will pick up the slack!
+      }
+
+      return NextResponse.json({ status: "completed_but_results_deferred" });
     }
 
     if (cfStatus.status === "failed") {
