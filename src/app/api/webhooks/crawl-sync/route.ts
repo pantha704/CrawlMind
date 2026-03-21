@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCrawlStatus, getCrawlResults } from "@/lib/cloudflare";
+import { getCrawlStatus } from "@/lib/cloudflare";
 import { scheduleCrawlSync } from "@/lib/qstash";
 
 /**
@@ -43,43 +43,21 @@ export async function POST(req: NextRequest) {
     }
 
     if (cfStatus.status === "completed") {
-      // Step 2: Fetch full results (may be large)
-      // If this times out, we still mark COMPLETED so job isn't stuck forever.
-      let resultData: unknown = null;
-      let pagesCount = 0;
-
-      try {
-        const results = await getCrawlResults(job.cfJobId, job.cfAccountId);
-        if (results.success && results.records) {
-          resultData = results.records;
-          pagesCount = (results.records as Record<string, unknown>[]).filter(
-            (p) => p.status === "completed"
-          ).length;
-        } else {
-          console.error(`[crawl-sync] Fetch failed for ${jobId}:`, results.error);
-          // If Cloudflare rate limits or returns 5xx when fetching results, 
-          // we should retry later rather than saving it as COMPLETED with 0 pages.
-          await scheduleCrawlSync(jobId, 60);
-          return NextResponse.json({ status: "retry_scheduled_due_to_fetch_error" });
-        }
-      } catch (err) {
-        console.error("[crawl-sync] Result fetch threw error:", err);
-        // Also retry on network exception
-        await scheduleCrawlSync(jobId, 60);
-        return NextResponse.json({ status: "retry_scheduled_due_to_exception" });
-      }
-
+      // Mark as completed immediately. We intentionally DO NOT fetch the result payload here
+      // because Cloudflare takes 15+ seconds to return large payloads, which kills Vercel's 
+      // 10s serverless timeout and causes the webhook to fail silently.
+      // The frontend will automatically fetch the results via the /api/crawl/[id]/results 
+      // streaming proxy route when the user views the job.
+      
       await prisma.crawlJob.update({
         where: { id: jobId },
         data: {
           status: "COMPLETED",
-          pagesCrawled: pagesCount,
-          resultData: resultData as object,
           completedAt: new Date(),
         },
       });
 
-      return NextResponse.json({ status: "completed", pages: pagesCount });
+      return NextResponse.json({ status: "completed" });
     }
 
     if (cfStatus.status === "failed") {
