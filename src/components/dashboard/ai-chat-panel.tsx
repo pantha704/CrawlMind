@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
-import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
+import { useRef, useEffect, useState, useMemo } from "react";
+import { useChat, Chat } from "@ai-sdk/react";
+import { DefaultChatTransport, UIMessage } from "ai";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -12,25 +12,59 @@ interface AiChatPanelProps {
   jobId: string;
 }
 
+const STORAGE_KEY = (jobId: string) => `crawlmind_chat_${jobId}`;
+
+function loadMessages(jobId: string): UIMessage[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY(jobId));
+    return raw ? (JSON.parse(raw) as UIMessage[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveMessages(jobId: string, messages: UIMessage[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY(jobId), JSON.stringify(messages));
+  } catch {
+    // storage full — ignore
+  }
+}
+
 export function AiChatPanel({ jobId }: AiChatPanelProps) {
-  // scrollable messages container
   const scrollRef = useRef<HTMLDivElement>(null);
   const [input, setInput] = useState("");
+  const [initialMessages] = useState<UIMessage[]>(() => loadMessages(jobId));
 
-  const { messages, sendMessage, status, setMessages } = useChat({
-    transport: new DefaultChatTransport({
-      api: "/api/chat",
-      body: { jobId },
-    }),
-  });
+  // Create a stable Chat instance seeded with persisted messages
+  const chat = useMemo(
+    () =>
+      new Chat({
+        messages: initialMessages,
+        transport: new DefaultChatTransport({
+          api: "/api/chat",
+          body: { jobId },
+        }),
+      }),
+    // Only create once per jobId — don't recreate on re-render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [jobId]
+  );
 
-  // 'submitted' = request sent, 'streaming' = response coming in
+  const { messages, sendMessage, status, setMessages } = useChat({ chat });
+
+  // Persist to localStorage whenever messages change
+  useEffect(() => {
+    saveMessages(jobId, messages);
+  }, [jobId, messages]);
+
+  // 'submitted' = sent, 'streaming' = receiving
   const isLoading = status === "submitted" || status === "streaming";
 
   const onSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!input.trim() || isLoading) return;
-
     const text = input;
     setInput("");
     sendMessage({ text });
@@ -38,9 +72,10 @@ export function AiChatPanel({ jobId }: AiChatPanelProps) {
 
   const onClear = () => {
     setMessages([]);
+    localStorage.removeItem(STORAGE_KEY(jobId));
   };
 
-  // Auto-scroll to the very bottom whenever messages change
+  // Auto-scroll to bottom on new messages / streaming chunks
   useEffect(() => {
     const el = scrollRef.current;
     if (el) {
@@ -49,12 +84,12 @@ export function AiChatPanel({ jobId }: AiChatPanelProps) {
   }, [messages, status]);
 
   return (
-    <div className="flex flex-col h-[400px] sm:h-[600px] rounded-xl border border-border/50 bg-card overflow-hidden">
-      {/* Header bar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-card shrink-0">
+    <div className="border border-border/50 rounded-xl bg-card overflow-hidden flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-card">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Bot className="w-3.5 h-3.5" />
-          <span>Session only — history resets on page reload</span>
+          <span>History saved per browser — full context sent each message</span>
         </div>
         {messages.length > 0 && (
           <Button
@@ -69,10 +104,11 @@ export function AiChatPanel({ jobId }: AiChatPanelProps) {
         )}
       </div>
 
-      {/* Messages — plain div with overflow-y-auto so imperative scroll works */}
+      {/* Messages — fixed height with overflow-y-auto */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-4 space-y-4"
+        style={{ height: "520px", overflowY: "auto" }}
+        className="p-4 space-y-4"
       >
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center py-16">
@@ -101,7 +137,6 @@ export function AiChatPanel({ jobId }: AiChatPanelProps) {
         ) : (
           <>
             {messages.map((msg) => {
-              // Extract text content from parts array (ai@6 format)
               const textContent = msg.parts
                 .filter((p) => p.type === "text")
                 .map((p) => (p as { type: "text"; text: string }).text)
@@ -141,7 +176,6 @@ export function AiChatPanel({ jobId }: AiChatPanelProps) {
               );
             })}
 
-            {/* Loading indicator while AI is responding */}
             {isLoading && (
               <div className="flex gap-3">
                 <Avatar className="w-8 h-8 shrink-0">
@@ -161,7 +195,7 @@ export function AiChatPanel({ jobId }: AiChatPanelProps) {
       {/* Input */}
       <form
         onSubmit={onSubmit}
-        className="border-t border-border/50 p-3 sm:p-4 flex gap-2 sm:gap-3 shrink-0"
+        className="border-t border-border/50 p-3 sm:p-4 flex gap-2 sm:gap-3"
       >
         <Textarea
           value={input}
