@@ -125,7 +125,15 @@ export async function POST(req: NextRequest) {
     let includePatterns: string[] | undefined;
     try {
       const urlObj = new URL(urls[0]);
-      includePatterns = [`${urlObj.origin}/*`];
+      // If user wants subdomains, we wildcard the subdomain part too
+      if (includeSubdomains) {
+        // e.g. "https://*.example.com/**"
+        const domain = urlObj.hostname.replace(/^www\./, "");
+        includePatterns = [`https://*.${domain}/**`, `http://*.${domain}/**`, `https://${domain}/**`, `http://${domain}/**`];
+      } else {
+        // Just the exact origin
+        includePatterns = [`${urlObj.origin}/**`];
+      }
     } catch {
       // In case of invalid URL fallback
     }

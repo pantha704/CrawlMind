@@ -25,7 +25,7 @@ async function runComprehensiveCrawl() {
     formats: ["markdown"],
     render: true,
     options: {
-      includePatterns: ["/en/courses/.*"], // Stay within courses
+      includePatterns: ["**/en/courses/**"], // Stay within courses
       waitFor: 2000 // Give JS time to render content
     }
   };

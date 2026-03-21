@@ -393,11 +393,11 @@ export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground flex items-center">
                     Exclude Patterns
-                    <InfoTip text="Comma-separated wildcard patterns. The crawler will explicitly skip these URLs (e.g. */blog/*, **/*.pdf)." />
+                    <InfoTip text="Comma-separated wildcard patterns. The crawler will explicitly skip these URLs (e.g. **/blog/**, **/*.pdf)." />
                   </Label>
                   <Input
                     type="text"
-                    placeholder="*/blog/*, **/*.pdf"
+                    placeholder="**/blog/**, **/*.pdf"
                     value={excludePatterns}
                     onChange={(e) => setExcludePatterns(e.target.value)}
                     className="bg-secondary/50"

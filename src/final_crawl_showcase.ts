@@ -14,7 +14,7 @@ async function run() {
     formats: ["markdown"],
     render: true,
     options: {
-      includePatterns: ["/en/courses/.*"]
+      includePatterns: ["**/en/courses/**"]
     }
   };
 
