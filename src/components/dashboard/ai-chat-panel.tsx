@@ -35,31 +35,36 @@ function saveMessages(jobId: string, messages: UIMessage[]) {
 export function AiChatPanel({ jobId }: AiChatPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [input, setInput] = useState("");
-  const [initialMessages] = useState<UIMessage[]>(() => loadMessages(jobId));
 
-  // Create a stable Chat instance seeded with persisted messages
   const chat = useMemo(
     () =>
       new Chat({
-        messages: initialMessages,
         transport: new DefaultChatTransport({
           api: "/api/chat",
           body: { jobId },
         }),
       }),
-    // Only create once per jobId — don't recreate on re-render
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [jobId]
   );
 
   const { messages, sendMessage, status, setMessages } = useChat({ chat });
 
-  // Persist to localStorage whenever messages change
+  // 1. Load history once on mount (avoids Next.js SSR hydration clash)
   useEffect(() => {
-    saveMessages(jobId, messages);
+    const saved = loadMessages(jobId);
+    if (saved.length > 0) {
+      setMessages(saved);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobId]); // we don't depend on setMessages to prevent re-runs
+
+  // 2. Persist whenever messages change and there are messages
+  useEffect(() => {
+    if (messages.length > 0) {
+      saveMessages(jobId, messages);
+    }
   }, [jobId, messages]);
 
-  // 'submitted' = sent, 'streaming' = receiving
   const isLoading = status === "submitted" || status === "streaming";
 
   const onSubmit = (e?: React.FormEvent) => {
@@ -75,7 +80,7 @@ export function AiChatPanel({ jobId }: AiChatPanelProps) {
     localStorage.removeItem(STORAGE_KEY(jobId));
   };
 
-  // Auto-scroll to bottom on new messages / streaming chunks
+  // Auto-scroll to bottom
   useEffect(() => {
     const el = scrollRef.current;
     if (el) {
@@ -84,9 +89,10 @@ export function AiChatPanel({ jobId }: AiChatPanelProps) {
   }, [messages, status]);
 
   return (
-    <div className="border border-border/50 rounded-xl bg-card overflow-hidden flex flex-col">
+    // Fixed outer container size -- ensures flex child can be scrollable
+    <div className="border border-border/50 rounded-xl bg-card overflow-hidden flex flex-col h-[600px]">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-card">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-card shrink-0">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Bot className="w-3.5 h-3.5" />
           <span>History saved per browser — full context sent each message</span>
@@ -104,11 +110,10 @@ export function AiChatPanel({ jobId }: AiChatPanelProps) {
         )}
       </div>
 
-      {/* Messages — fixed height with overflow-y-auto */}
+      {/* Messages wrapper — flex-1 takes exact remaining space and allows scrolling */}
       <div
         ref={scrollRef}
-        style={{ height: "520px", overflowY: "auto" }}
-        className="p-4 space-y-4"
+        className="flex-1 overflow-y-auto p-4 space-y-4"
       >
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center py-16">
@@ -138,9 +143,11 @@ export function AiChatPanel({ jobId }: AiChatPanelProps) {
           <>
             {messages.map((msg) => {
               const textContent = msg.parts
-                .filter((p) => p.type === "text")
-                .map((p) => (p as { type: "text"; text: string }).text)
-                .join("");
+                ? msg.parts
+                    .filter((p) => p.type === "text")
+                    .map((p) => (p as { type: "text"; text: string }).text)
+                    .join("")
+                : (msg as any).content || "";
 
               return (
                 <div
@@ -192,10 +199,10 @@ export function AiChatPanel({ jobId }: AiChatPanelProps) {
         )}
       </div>
 
-      {/* Input */}
+      {/* Input section — shrink-0 ensures it stays at the bottom and doesn't compress */}
       <form
         onSubmit={onSubmit}
-        className="border-t border-border/50 p-3 sm:p-4 flex gap-2 sm:gap-3"
+        className="border-t border-border/50 p-3 flex gap-2 sm:gap-3 shrink-0 bg-card"
       >
         <Textarea
           value={input}
