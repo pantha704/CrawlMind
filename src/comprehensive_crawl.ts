@@ -34,16 +34,21 @@ async function runComprehensiveCrawl() {
   let retries = 3;
   
   while (retries > 0) {
-    start = await startCrawlJob(config as any);
-    if (start.success && start.jobId) break;
-    
-    if (start.error?.includes("429") || start.error?.toLowerCase().includes("rate limit")) {
-      console.warn(`🚨 Rate limit hit. Retrying in 60s... (${retries} attempts left)`);
-      await new Promise(r => setTimeout(r, 60000));
-      retries--;
-    } else {
-      console.error("❌ Failed to start comprehensive crawl:", start.error);
-      return;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      start = await startCrawlJob(config as any);
+      if (start.success && start.jobId) break;
+      
+      if (start.error?.includes("429") || start.error?.toLowerCase().includes("rate limit")) {
+        console.warn(`🚨 Rate limit hit. Retrying in 60s... (${retries} attempts left)`);
+        await new Promise(r => setTimeout(r, 60000));
+        retries--;
+      } else {
+        console.error("❌ Failed to start comprehensive crawl:", start.error);
+        return;
+      }
+    } catch (error: Error | unknown) {
+      console.error("Detailed crawl failed:", error);
     }
   }
 

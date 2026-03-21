@@ -18,6 +18,7 @@ async function run() {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const start = await startCrawlJob(config as any);
 
   if (!start.success) {
