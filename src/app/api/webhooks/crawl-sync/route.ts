@@ -55,10 +55,18 @@ export async function POST(req: NextRequest) {
           pagesCount = (results.records as Record<string, unknown>[]).filter(
             (p) => p.status === "completed"
           ).length;
+        } else {
+          console.error(`[crawl-sync] Fetch failed for ${jobId}:`, results.error);
+          // If Cloudflare rate limits or returns 5xx when fetching results, 
+          // we should retry later rather than saving it as COMPLETED with 0 pages.
+          await scheduleCrawlSync(jobId, 60);
+          return NextResponse.json({ status: "retry_scheduled_due_to_fetch_error" });
         }
-      } catch {
-        // Data fetch failed/timed out — still mark completed so job isn't stuck
-        console.error("[crawl-sync] Result fetch failed, marking completed without data");
+      } catch (err) {
+        console.error("[crawl-sync] Result fetch threw error:", err);
+        // Also retry on network exception
+        await scheduleCrawlSync(jobId, 60);
+        return NextResponse.json({ status: "retry_scheduled_due_to_exception" });
       }
 
       await prisma.crawlJob.update({
