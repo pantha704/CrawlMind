@@ -16,18 +16,18 @@ const plans = [
     features: [
       { text: "2 crawls per day", included: true },
       { text: "Up to 30 pages per crawl", included: true },
-      { text: "Static mode only", included: true },
-      { text: "3 AI queries per crawl", included: true },
       { text: "Markdown + JSON output", included: true },
+      { text: "3 AI queries per crawl", included: true },
       { text: "7-day result history", included: true },
-      { text: "JS rendering", included: false },
+      { text: "Full JS rendering", included: false },
       { text: "Analytics dashboard", included: false },
+      { text: "API & Webhooks", included: false },
     ],
   },
   {
     name: "Pro",
     tagline: "For power users",
-    price: "$12",
+    price: "₹999",
     period: "/mo",
     cta: "Start 7-day trial",
     ctaVariant: "default" as const,
@@ -37,26 +37,44 @@ const plans = [
       { text: "Up to 500 pages per crawl", included: true },
       { text: "Full JS rendering", included: true },
       { text: "Unlimited AI queries", included: true },
-      { text: "Plain English → URL discovery", included: true },
+      { text: "AI-powered URL discovery", included: true },
       { text: "Analytics dashboard", included: true },
       { text: "90-day result history", included: true },
-      { text: "Priority queue", included: true },
+      { text: "API & Webhooks", included: false },
+    ],
+  },
+  {
+    name: "Pro+",
+    tagline: "For serious builders",
+    price: "₹1,999",
+    period: "/mo",
+    cta: "Get Pro+",
+    ctaVariant: "outline" as const,
+    features: [
+      { text: "75 crawls per day", included: true },
+      { text: "Up to 1,000 pages per crawl", included: true },
+      { text: "Full JS rendering", included: true },
+      { text: "Priority crawl queue", included: true },
+      { text: "Webhook delivery", included: true },
+      { text: "180-day result history", included: true },
+      { text: "Analytics dashboard", included: true },
+      { text: "API access", included: false },
     ],
   },
   {
     name: "Scale",
     tagline: "For teams and pipelines",
-    price: "$39",
+    price: "₹3,299",
     period: "/mo",
     cta: "Get Scale",
     ctaVariant: "outline" as const,
     features: [
       { text: "150 crawls per day", included: true },
       { text: "Up to 5,000 pages per crawl", included: true },
-      { text: "Scheduled/recurring crawls", included: true },
+      { text: "Scheduled crawls", included: true },
       { text: "Webhook delivery", included: true },
-      { text: "Team seats (up to 5)", included: true },
       { text: "API access", included: true },
+      { text: "Team seats (up to 5)", included: true },
       { text: "365-day result history", included: true },
       { text: "Dedicated support", included: true },
     ],
@@ -81,7 +99,7 @@ export function PricingPreview() {
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-6">
           {plans.map((plan, i) => (
             <motion.div
               key={plan.name}
