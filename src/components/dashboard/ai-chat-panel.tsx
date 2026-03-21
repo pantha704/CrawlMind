@@ -16,11 +16,19 @@ export function AiChatPanel({ jobId }: AiChatPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   /* eslint-disable @typescript-eslint/no-explicit-any */
-  const { messages, input, setInput, handleSubmit, isLoading } = useChat({
+  const { messages, input, setInput, append, isLoading } = useChat({
     api: "/api/chat",
     body: { jobId },
   } as any) as any;
   /* eslint-enable @typescript-eslint/no-explicit-any */
+
+  const onSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!input.trim() || isLoading) return;
+    
+    append({ role: "user", content: input });
+    setInput("");
+  };
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -110,7 +118,7 @@ export function AiChatPanel({ jobId }: AiChatPanelProps) {
 
       {/* Input */}
       <form
-        onSubmit={handleSubmit}
+        onSubmit={onSubmit}
         className="border-t border-border/50 p-3 sm:p-4 flex gap-2 sm:gap-3"
       >
         <Textarea
@@ -122,7 +130,7 @@ export function AiChatPanel({ jobId }: AiChatPanelProps) {
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
-              handleSubmit(e as unknown as React.FormEvent);
+              onSubmit(e as unknown as React.FormEvent);
             }
           }}
         />
