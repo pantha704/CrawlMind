@@ -6,7 +6,9 @@ import { DefaultChatTransport, UIMessage } from "ai";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Send, Loader2, Bot, User, Trash2 } from "lucide-react";
+import { Send, Loader2, Bot, User, Trash2, Brain, ChevronRight } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface AiChatPanelProps {
   jobId: string;
@@ -88,6 +90,60 @@ export function AiChatPanel({ jobId }: AiChatPanelProps) {
     }
   }, [messages, status]);
 
+  // Handle <think> blocks and markdown
+  const renderMessageContent = (textContent: string) => {
+    const thinkStart = textContent.indexOf("<think>");
+    if (thinkStart === -1) {
+      return (
+        <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:p-0">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {textContent}
+          </ReactMarkdown>
+        </div>
+      );
+    }
+
+    const thinkEnd = textContent.indexOf("</think>");
+    let think = "";
+    let content = "";
+    let isThinking = false;
+
+    if (thinkEnd === -1) {
+      // Still streaming think block
+      think = textContent.substring(thinkStart + 7);
+      content = textContent.substring(0, thinkStart);
+      isThinking = true;
+    } else {
+      think = textContent.substring(thinkStart + 7, thinkEnd);
+      content = textContent.substring(0, thinkStart) + textContent.substring(thinkEnd + 8);
+    }
+
+    return (
+      <div className="flex flex-col gap-2">
+        {think && (
+          <details className="group border border-border/50 rounded-lg bg-secondary/10 mt-1 mb-2">
+            <summary className="flex items-center gap-2 p-2 px-3 text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+              <Brain className={`w-3.5 h-3.5 ${isThinking ? 'animate-pulse text-primary' : ''}`} />
+              <span className="group-open:hidden">{isThinking ? 'Thinking...' : 'Thought Process'}</span>
+              <span className="hidden group-open:inline">Hide Thought Process</span>
+              <ChevronRight className="w-3.5 h-3.5 ml-auto transition-transform group-open:rotate-90" />
+            </summary>
+            <div className="p-3 pt-1 text-xs text-muted-foreground/80 whitespace-pre-wrap font-mono border-t border-border/10">
+              {think.trim()}
+            </div>
+          </details>
+        )}
+        {content.trim() && (
+          <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:p-0 prose-pre:bg-secondary/50 prose-pre:border prose-pre:border-border/50">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {content.trim()}
+            </ReactMarkdown>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     // We use ABSOLUTE POSITIONING to absolutely guarantee the bounds
     <div 
@@ -167,13 +223,17 @@ export function AiChatPanel({ jobId }: AiChatPanelProps) {
                     </Avatar>
                   )}
                   <div
-                    className={`max-w-[90%] sm:max-w-[80%] rounded-xl px-4 py-3 text-sm leading-relaxed ${
+                    className={`max-w-[90%] sm:max-w-[85%] rounded-xl px-4 py-3 text-sm leading-relaxed ${
                       msg.role === "user"
                         ? "bg-primary text-primary-foreground"
-                        : "bg-secondary/50 text-foreground"
+                        : "bg-secondary/50 text-foreground overflow-x-auto"
                     }`}
                   >
-                    <div className="whitespace-pre-wrap">{textContent}</div>
+                    {msg.role === "user" ? (
+                      <div className="whitespace-pre-wrap">{textContent}</div>
+                    ) : (
+                      renderMessageContent(textContent)
+                    )}
                   </div>
                   {msg.role === "user" && (
                     <Avatar className="w-8 h-8 shrink-0 mt-0.5">
