@@ -10,7 +10,7 @@ const qstashClient = new Client({
  * even if the user closed their browser tab.
  */
 export async function scheduleCrawlSync(
-  jobId: string,
+  payload: { jobId: string; action?: "SYNC" | "FETCH_CHUNK"; cursor?: string | null },
   delaySec: number = 30
 ) {
   // VERCEL_URL is automatically set by Vercel to the deployment URL (e.g. crawl-mind.vercel.app)
@@ -20,10 +20,9 @@ export async function scheduleCrawlSync(
     ? (vercelUrl ?? process.env.NEXT_PUBLIC_APP_URL)
     : (process.env.NEXT_PUBLIC_APP_URL ?? vercelUrl ?? "http://localhost:3001");
 
-
   await qstashClient.publishJSON({
     url: `${appUrl}/api/webhooks/crawl-sync`,
-    body: { jobId },
+    body: payload,
     delay: delaySec,
     retries: 3,
   });

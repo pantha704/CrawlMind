@@ -24,34 +24,37 @@ export async function GET(
           const cfStatus = await getCrawlStatus(job.cfJobId, job.cfAccountId);
           if (cfStatus.success) {
             let newStatus = job.status;
-            if (cfStatus.status === "completed") newStatus = "COMPLETED";
+            if (cfStatus.status === "completed") newStatus = "FETCHING_RESULTS";
             if (cfStatus.status === "failed") newStatus = "FAILED";
 
-            const resultData = cfStatus.data as Record<string, unknown>;
-            let pagesCount = job.pagesCrawled;
-
-            if (Array.isArray(resultData)) {
-              pagesCount = resultData.filter((p: Record<string, unknown>) => p.status === "completed").length;
-            } else if (resultData?.pages_crawled) {
-              pagesCount = resultData.pages_crawled as number;
-            } else if (resultData?.total_pages) {
-              pagesCount = resultData.total_pages as number;
+            if (newStatus !== job.status) {
+              const updatedJob = await prisma.crawlJob.update({
+                where: { id: job.id },
+                data: {
+                  status: newStatus,
+                },
+              });
+              
+              if (newStatus === "FETCHING_RESULTS") {
+                // Kickstart the background fetch process
+                const { scheduleCrawlSync } = await import("@/lib/qstash");
+                await scheduleCrawlSync({ jobId: job.id, action: "FETCH_CHUNK", cursor: null }, 0);
+              }
+              
+              return NextResponse.json({ job: updatedJob });
             }
-
-            const updatedJob = await prisma.crawlJob.update({
-              where: { id: job.id },
-              data: {
-                status: newStatus,
-                pagesCrawled: pagesCount,
-                resultData: cfStatus.status === "completed" ? (resultData as object) : (job.resultData ?? undefined),
-                completedAt: cfStatus.status === "completed" ? new Date() : undefined,
-              },
-            });
-            return NextResponse.json({ job: updatedJob });
           }
         } catch (e) {
           console.error(`Sync failed for job ${id}:`, e);
         }
+      }
+    } else if (job.status === "FETCHING_RESULTS") {
+      // Just in case the webhook died, kickstart it when the user visits the page
+      try {
+        const { scheduleCrawlSync } = await import("@/lib/qstash");
+        await scheduleCrawlSync({ jobId: job.id, action: "FETCH_CHUNK", cursor: null }, 0);
+      } catch (e) {
+         console.error(`Failed to schedule chunk restart for ${id}:`, e);
       }
     }
 

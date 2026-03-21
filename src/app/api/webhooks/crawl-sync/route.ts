@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCrawlStatus, getCrawlResults } from "@/lib/cloudflare";
+import { getCrawlStatus, getCrawlResultsChunk } from "@/lib/cloudflare";
 import { scheduleCrawlSync } from "@/lib/qstash";
 
 export const maxDuration = 60; // Allow Vercel up to 60s since CF results fetch is slow
@@ -15,7 +15,7 @@ export const maxDuration = 60; // Allow Vercel up to 60s since CF results fetch 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { jobId } = body;
+    const { jobId, action = "SYNC", cursor } = body;
 
     if (!jobId) {
       return NextResponse.json({ error: "Missing jobId" }, { status: 400 });
@@ -27,7 +27,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Job not found" }, { status: 404 });
     }
 
-    // Already done — skip
     if (job.status === "COMPLETED" || job.status === "FAILED") {
       return NextResponse.json({ status: "already_done" });
     }
@@ -36,54 +35,64 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: "no_cf_job" });
     }
 
-    // Step 1: Lightweight status check (no page records, fast)
+    if (action === "FETCH_CHUNK") {
+      // Chunking mode! This takes ~7-10 seconds per request.
+      const chunkResult = await getCrawlResultsChunk(job.cfJobId, job.cfAccountId, cursor);
+      
+      if (!chunkResult.success) {
+        console.error("[crawl-sync] Chunk fetch failed:", chunkResult.error);
+        await scheduleCrawlSync({ jobId, action: "FETCH_CHUNK", cursor }, 10);
+        return NextResponse.json({ status: "chunk_retry_scheduled" });
+      }
+
+      // Append records
+      const existingData = Array.isArray(job.resultData) ? job.resultData : [];
+      const newRecords = chunkResult.records || [];
+      const mergedData = [...existingData, ...newRecords];
+      
+      // Update DB
+      await prisma.crawlJob.update({
+        where: { id: jobId },
+        data: {
+          resultData: mergedData as object,
+          pagesCrawled: mergedData.length,
+        },
+      });
+
+      if (chunkResult.cursor) {
+        // More chunks remaining
+        await scheduleCrawlSync({ jobId, action: "FETCH_CHUNK", cursor: chunkResult.cursor }, 0); // Immediately enqueue next
+        return NextResponse.json({ status: "chunk_saved_more_remaining", cursor: chunkResult.cursor });
+      } else {
+        // Done! All chunks fetched.
+        await prisma.crawlJob.update({
+          where: { id: jobId },
+          data: {
+            status: "COMPLETED",
+            completedAt: new Date(),
+          },
+        });
+        return NextResponse.json({ status: "fully_completed", pages: mergedData.length });
+      }
+    }
+
+    // Step 1: Lightweight status check (action === "SYNC")
     const cfStatus = await getCrawlStatus(job.cfJobId, job.cfAccountId);
 
     if (!cfStatus.success) {
-      await scheduleCrawlSync(jobId, 60);
+      await scheduleCrawlSync({ jobId, action: "SYNC" }, 60);
       return NextResponse.json({ status: "retry_scheduled" });
     }
 
     if (cfStatus.status === "completed") {
-      // 1. Mark as COMPLETED immediately!
-      // This guarantees the job never gets stuck in RUNNING even if the background 
-      // payload download fails or exceeds Vercel's strict 60s function timeout.
+      // Crawl finished. Initiate the chunk fetching process.
       await prisma.crawlJob.update({
         where: { id: jobId },
-        data: {
-          status: "COMPLETED",
-          completedAt: new Date(),
-        },
+        data: { status: "FETCHING_RESULTS" },
       });
-
-      // 2. Attempt Step 2: Fetch full results in the background
-      // If this takes >60s, Vercel kills this lambda and throws a 504.
-      // But because we already saved the DB as COMPLETED above, the user 
-      // will gracefully fall back to the client-side streaming proxy!
-      try {
-        const results = await getCrawlResults(job.cfJobId, job.cfAccountId);
-        if (results.success && results.records) {
-          const pagesCount = (results.records as Record<string, unknown>[]).filter(
-            (p) => p.status === "completed"
-          ).length;
-
-          // 3. Update the DB again with the actual heavy payload
-          await prisma.crawlJob.update({
-            where: { id: jobId },
-            data: {
-              pagesCrawled: pagesCount,
-              resultData: results.records as object,
-            },
-          });
-          return NextResponse.json({ status: "completed", pages: pagesCount });
-        }
-      } catch (err) {
-        console.error("[crawl-sync] Result fetch threw error (or timed out):", err);
-        // It's fine to swallow this error. The job is COMPLETED, resultData is null.
-        // The frontend streaming proxy (/api/crawl/[id]/results) will pick up the slack!
-      }
-
-      return NextResponse.json({ status: "completed_but_results_deferred" });
+      // Enqueue the first chunk immediately
+      await scheduleCrawlSync({ jobId, action: "FETCH_CHUNK", cursor: null }, 0);
+      return NextResponse.json({ status: "fetching_started" });
     }
 
     if (cfStatus.status === "failed") {
@@ -95,7 +104,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Still running — re-queue
-    await scheduleCrawlSync(jobId, 60);
+    await scheduleCrawlSync({ jobId, action: "SYNC" }, 60);
     return NextResponse.json({ status: "pending", nextCheck: 60 });
 
   } catch (err) {

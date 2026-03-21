@@ -213,7 +213,7 @@ export async function POST(req: NextRequest) {
     // Schedule QStash background sync (resilient — works even if user closes tab)
     try {
       const { scheduleCrawlSync } = await import("@/lib/qstash");
-      await scheduleCrawlSync(job.id, 30); // first check after 30s
+      await scheduleCrawlSync({ jobId: job.id, action: "SYNC" }, 30); // first check after 30s
     } catch (e) {
       console.error("QStash scheduling failed (non-critical):", e);
     }

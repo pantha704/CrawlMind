@@ -58,11 +58,6 @@ interface CrawlStatusResult {
   error?: string;
 }
 
-interface CrawlResultData {
-  success: boolean;
-  records?: unknown[];
-  error?: string;
-}
 
 export async function startCrawlJob(config: CrawlConfig): Promise<CrawlStartResult> {
   if (credentials.length === 0) {
@@ -142,7 +137,7 @@ function getCredForAccount(accountId?: string | null): { targetAccountId: string
 }
 
 /**
- * Lightweight status-only check — does NOT return page records.
+ * Lightweight status-only check — uses ?limit=1 to avoid downloading records.
  * Safe to call frequently; avoids timeouts on large crawls.
  */
 export async function getCrawlStatus(jobId: string, accountId?: string | null): Promise<CrawlStatusResult> {
@@ -154,24 +149,9 @@ export async function getCrawlStatus(jobId: string, accountId?: string | null): 
   console.log(`[CF] Checking status for jobId: ${jobId} on account: ${targetAccountId}`);
 
   try {
-    const response = await fetch(`${CF_BASE_URL}/crawl/${jobId}/status`, {
+    const response = await fetch(`${CF_BASE_URL}/crawl/${jobId}?limit=1`, {
       headers: { Authorization: `Bearer ${tokenToUse}` },
     });
-
-    // Cloudflare may not have a /status endpoint; fall back to full endpoint
-    if (response.status === 404) {
-      const fallback = await fetch(`${CF_BASE_URL}/crawl/${jobId}`, {
-        headers: { Authorization: `Bearer ${tokenToUse}` },
-      });
-      const data = await fallback.json();
-      if (!fallback.ok || !data.success) {
-        return { success: false, status: "failed", error: data.errors?.[0]?.message || "Status check failed" };
-      }
-      const result = data.result;
-      if (result.status === "completed" || result.records) return { success: true, status: "completed" };
-      if (result.status === "failed") return { success: false, status: "failed", error: result.error };
-      return { success: true, status: "running" };
-    }
 
     const data = await response.json();
     if (!response.ok || !data.success) {
@@ -187,27 +167,43 @@ export async function getCrawlStatus(jobId: string, accountId?: string | null): 
   }
 }
 
+interface CrawlResultChunk {
+  success: boolean;
+  records?: unknown[];
+  cursor?: string | null;
+  error?: string;
+}
+
 /**
- * Heavy fetch — downloads all crawled page records from Cloudflare.
- * Only call this once after status is confirmed "completed".
+ * Heavy fetch — downloads a chunk of crawled page records from Cloudflare.
  */
-export async function getCrawlResults(jobId: string, accountId?: string | null): Promise<CrawlResultData> {
+export async function getCrawlResultsChunk(jobId: string, accountId?: string | null, cursor?: string | null): Promise<CrawlResultChunk> {
   const cred = getCredForAccount(accountId);
   if (!cred) return { success: false, error: "Missing credentials" };
 
   const { targetAccountId, tokenToUse } = cred;
   const CF_BASE_URL = `https://api.cloudflare.com/client/v4/accounts/${targetAccountId}/browser-rendering`;
-  console.log(`[CF] Fetching full results for jobId: ${jobId}`);
+  console.log(`[CF] Fetching results chunk for jobId: ${jobId}, cursor: ${cursor}`);
 
   try {
-    const response = await fetch(`${CF_BASE_URL}/crawl/${jobId}`, {
+    const url = new URL(`${CF_BASE_URL}/crawl/${jobId}`);
+    url.searchParams.append("limit", "10"); // Vercel hobby limits mean we can't do large limits natively
+    if (cursor) {
+      url.searchParams.append("cursor", cursor);
+    }
+
+    const response = await fetch(url.toString(), {
       headers: { Authorization: `Bearer ${tokenToUse}` },
     });
     const data = await response.json();
     if (!response.ok || !data.success) {
       return { success: false, error: data.errors?.[0]?.message || "Failed to fetch results" };
     }
-    return { success: true, records: data.result?.records || [] };
+    return { 
+      success: true, 
+      records: data.result?.records || [],
+      cursor: data.result?.cursor,
+    };
   } catch (error: unknown) {
     return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
