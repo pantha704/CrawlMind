@@ -71,19 +71,23 @@ ${resultPreview || "No content extracted yet — the crawl may still be in progr
       systemPrompt = (systemMessage as unknown as { content?: string }).content || "";
     }
 
+    const parsedMessages = jobId && jobId !== "none" 
+      ? await convertToModelMessages(uiMessages) 
+      : uiMessages.map((m: { role: string; content?: string }) => ({ role: m.role as "user" | "assistant", content: m.content || "" }));
+
     // Try primary model, fallback to fast model
     let result;
     try {
       result = streamText({
         model: chatModel,
         ...(systemPrompt ? { system: systemPrompt } : {}),
-        messages: await convertToModelMessages(uiMessages),
+        messages: parsedMessages,
       });
     } catch {
       result = streamText({
         model: fastModel,
         ...(systemPrompt ? { system: systemPrompt } : {}),
-        messages: await convertToModelMessages(uiMessages),
+        messages: parsedMessages,
       });
     }
 
