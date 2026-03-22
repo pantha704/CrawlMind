@@ -30,9 +30,9 @@ export async function GET() {
 
     const tierLimits = {
       SPARK: { label: "Spark Plan", maxCrawls: 5, maxPages: 100, allowAI: false, allowJS: false },
-      PRO: { label: "Pro Plan", maxCrawls: 25, maxPages: 500, allowAI: true, allowJS: true },
-      PRO_PLUS: { label: "Pro+ Plan", maxCrawls: 75, maxPages: 1000, allowAI: true, allowJS: true },
-      SCALE: { label: "Scale Plan", maxCrawls: 150, maxPages: 5000, allowAI: true, allowJS: true },
+      PRO: { label: "Pro Plan", maxCrawls: 25, maxPages: 100, allowAI: true, allowJS: true },
+      PRO_PLUS: { label: "Pro+ Plan", maxCrawls: 75, maxPages: 100, allowAI: true, allowJS: true },
+      SCALE: { label: "Scale Plan", maxCrawls: 150, maxPages: 100, allowAI: true, allowJS: true },
     };
 
     const userPlan = (dbUser?.plan as keyof typeof tierLimits) || "SPARK";

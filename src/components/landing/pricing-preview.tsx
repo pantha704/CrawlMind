@@ -34,7 +34,7 @@ const plans = [
     popular: true,
     features: [
       { text: "25 crawls per day", included: true },
-      { text: "Up to 500 pages per crawl", included: true },
+      { text: "Up to 100 pages per crawl", included: true },
       { text: "Full JS rendering", included: true },
       { text: "Unlimited AI queries", included: true },
       { text: "AI-powered URL discovery", included: true },
@@ -52,7 +52,7 @@ const plans = [
     ctaVariant: "outline" as const,
     features: [
       { text: "75 crawls per day", included: true },
-      { text: "Up to 1,000 pages per crawl", included: true },
+      { text: "Up to 100 pages per crawl", included: true },
       { text: "Full JS rendering", included: true },
       { text: "Priority crawl queue", included: true },
       { text: "Webhook delivery", included: true },
@@ -70,7 +70,7 @@ const plans = [
     ctaVariant: "outline" as const,
     features: [
       { text: "150 crawls per day", included: true },
-      { text: "Up to 5,000 pages per crawl", included: true },
+      { text: "Up to 100 pages per crawl", included: true },
       { text: "Scheduled crawls", included: true },
       { text: "Webhook delivery", included: true },
       { text: "API access", included: true },

@@ -42,9 +42,9 @@ export async function POST(req: NextRequest) {
 
     const tierLimits = {
       SPARK: { maxCrawls: 5, maxPages: 100, allowAI: false, allowJS: false },
-      PRO: { maxCrawls: 25, maxPages: 500, allowAI: true, allowJS: true },
-      PRO_PLUS: { maxCrawls: 75, maxPages: 1000, allowAI: true, allowJS: true },
-      SCALE: { maxCrawls: 150, maxPages: 5000, allowAI: true, allowJS: true },
+      PRO: { maxCrawls: 25, maxPages: 100, allowAI: true, allowJS: true },
+      PRO_PLUS: { maxCrawls: 75, maxPages: 100, allowAI: true, allowJS: true },
+      SCALE: { maxCrawls: 150, maxPages: 100, allowAI: true, allowJS: true },
     };
 
     const userPlan = (dbUser?.plan as keyof typeof tierLimits) || "SPARK";

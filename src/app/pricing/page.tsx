@@ -46,7 +46,7 @@ const plans = [
     inherits: "Everything in Spark, plus:",
     features: [
       "25 crawls per day",
-      "Up to 500 pages per crawl",
+      "Up to 100 pages per crawl",
       "Full JS rendering",
       "Unlimited AI queries",
       "AI-powered URL discovery",
@@ -64,7 +64,7 @@ const plans = [
     inherits: "Everything in Pro, plus:",
     features: [
       "75 crawls per day",
-      "Up to 1,000 pages per crawl",
+      "Up to 100 pages per crawl",
       "Priority crawl queue",
       "180-day result history",
       "Webhook delivery",
@@ -80,7 +80,7 @@ const plans = [
     inherits: "Everything in Pro+, plus:",
     features: [
       "150 crawls per day",
-      "Up to 5,000 pages per crawl",
+      "Up to 100 pages per crawl",
       "Scheduled & recurring crawls",
       "Team seats (up to 5)",
       "API access",
