@@ -31,34 +31,27 @@ export async function GET() {
         if (!job.cfJobId || job.cfJobId === "pending") return job;
 
         try {
-          const cfStatus = await getCrawlStatus(job.cfJobId);
+          const cfStatus = await getCrawlStatus(job.cfJobId, job.cfAccountId);
 
           if (cfStatus.success) {
             let newStatus = job.status;
-            if (cfStatus.status === "completed") newStatus = "COMPLETED";
+            if (cfStatus.status === "completed") newStatus = "FETCHING_RESULTS";
             if (cfStatus.status === "failed") newStatus = "FAILED";
 
-            const resultData = cfStatus.data as Record<string, unknown>;
-            let pagesCount = job.pagesCrawled;
-
-            if (Array.isArray(resultData)) {
-              pagesCount = resultData.filter((p: Record<string, unknown>) => p.status === "completed").length;
-            } else if (resultData?.pages_crawled) {
-              pagesCount = resultData.pages_crawled as number;
-            } else if (resultData?.total_pages) {
-              pagesCount = resultData.total_pages as number;
-            }
-
-            if (newStatus !== job.status || pagesCount !== job.pagesCrawled) {
-              return await prisma.crawlJob.update({
+            if (newStatus !== job.status) {
+              const updatedJob = await prisma.crawlJob.update({
                 where: { id: job.id },
                 data: {
                   status: newStatus,
-                  pagesCrawled: pagesCount,
-                  resultData: cfStatus.status === "completed" ? (resultData as object) : (job.resultData ?? undefined),
-                  completedAt: cfStatus.status === "completed" ? new Date() : undefined,
                 },
               });
+
+              if (newStatus === "FETCHING_RESULTS") {
+                const { scheduleCrawlSync } = await import("@/lib/qstash");
+                await scheduleCrawlSync({ jobId: job.id, action: "FETCH_CHUNK", cursor: null }, 0);
+              }
+              
+              return updatedJob;
             }
           }
         } catch (e) {
