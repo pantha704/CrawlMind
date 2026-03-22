@@ -17,7 +17,8 @@ interface Job {
 
 const statusConfig: Record<string, { icon: React.ElementType; color: string; label: string }> = {
   QUEUED: { icon: Clock, color: "text-yellow-500", label: "Queued" },
-  RUNNING: { icon: Loader2, color: "text-primary", label: "Running" },
+  RUNNING: { icon: Loader2, color: "text-primary", label: "Crawling Site" },
+  FETCHING_RESULTS: { icon: Loader2, color: "text-blue-500", label: "Downloading Data" },
   COMPLETED: { icon: CheckCircle2, color: "text-green-500", label: "Done" },
   PARTIAL: { icon: CheckCircle2, color: "text-orange-500", label: "Partial" },
   FAILED: { icon: XCircle, color: "text-destructive", label: "Failed" },
@@ -109,7 +110,7 @@ export function ActiveJobs() {
               <div className="flex items-center gap-2 min-w-0">
                 <Icon
                   className={`w-4 h-4 shrink-0 ${cfg.color} ${
-                    job.status === "RUNNING" ? "animate-spin" : ""
+                    (job.status === "RUNNING" || job.status === "FETCHING_RESULTS") ? "animate-spin" : ""
                   }`}
                 />
                 <span className="text-sm font-medium truncate">
@@ -143,12 +144,12 @@ export function ActiveJobs() {
               </div>
             </div>
 
-            {(job.status === "RUNNING" || job.status === "QUEUED") && (
+            {(job.status === "RUNNING" || job.status === "QUEUED" || job.status === "FETCHING_RESULTS") && (
               <div className="text-xs text-muted-foreground flex items-center gap-2">
                 <div className="h-1 flex-1 rounded-full bg-primary/10 overflow-hidden">
                   <div className="h-full w-1/3 rounded-full bg-primary/40 animate-pulse" />
                 </div>
-                <span>Processing...</span>
+                <span>{job.status === "FETCHING_RESULTS" ? "Downloading Phase..." : "Processing..."}</span>
               </div>
             )}
           </div>

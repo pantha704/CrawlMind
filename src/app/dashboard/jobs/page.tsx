@@ -37,6 +37,7 @@ interface CrawlJob {
 const statusColors: Record<string, string> = {
   COMPLETED: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
   RUNNING: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  FETCHING_RESULTS: "bg-blue-500/15 text-blue-400 border-blue-500/30",
   PARTIAL: "bg-blue-500/15 text-blue-400 border-blue-500/30",
   FAILED: "bg-red-500/15 text-red-400 border-red-500/30",
 };
@@ -119,6 +120,7 @@ export default function CrawlJobsPage() {
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="RUNNING">Running</SelectItem>
+            <SelectItem value="FETCHING_RESULTS">Fetching Results</SelectItem>
             <SelectItem value="COMPLETED">Completed</SelectItem>
             <SelectItem value="PARTIAL">Partial</SelectItem>
             <SelectItem value="FAILED">Failed</SelectItem>
@@ -196,10 +198,10 @@ export default function CrawlJobsPage() {
                   statusColors[job.status] || ""
                 }`}
               >
-                {job.status === "RUNNING" && (
+                {(job.status === "RUNNING" || job.status === "FETCHING_RESULTS") && (
                   <Loader2 className="w-3 h-3 mr-1 animate-spin" />
                 )}
-                {job.status}
+                {job.status.replace("_", " ")}
               </Badge>
 
               <ExternalLink className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors shrink-0" />

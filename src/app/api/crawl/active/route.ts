@@ -19,7 +19,7 @@ export async function GET() {
     const activeJobs = await prisma.crawlJob.findMany({
       where: {
         userId,
-        status: { in: ["QUEUED", "RUNNING"] },
+        status: { in: ["QUEUED", "RUNNING", "FETCHING_RESULTS"] },
       },
       orderBy: { createdAt: "desc" },
       take: 10,
@@ -33,26 +33,32 @@ export async function GET() {
         try {
           const cfStatus = await getCrawlStatus(job.cfJobId, job.cfAccountId);
 
+          let newStatus = job.status;
+          
           if (cfStatus.success) {
-            let newStatus = job.status;
             if (cfStatus.status === "completed") newStatus = "FETCHING_RESULTS";
             if (cfStatus.status === "failed") newStatus = "FAILED";
-
-            if (newStatus !== job.status) {
-              const updatedJob = await prisma.crawlJob.update({
-                where: { id: job.id },
-                data: {
-                  status: newStatus,
-                },
-              });
-
-              if (newStatus === "FETCHING_RESULTS") {
-                const { scheduleCrawlSync } = await import("@/lib/qstash");
-                await scheduleCrawlSync({ jobId: job.id, action: "FETCH_CHUNK", cursor: null }, 0);
-              }
-              
-              return updatedJob;
+          } else {
+            console.error(`[ACTIVE POLLING] cfStatus returned success: false for job ${job.id}`, cfStatus);
+            if (cfStatus.status === "failed") {
+              newStatus = "FAILED";
             }
+          }
+
+          if (newStatus !== job.status) {
+            const updatedJob = await prisma.crawlJob.update({
+              where: { id: job.id },
+              data: {
+                status: newStatus,
+              },
+            });
+
+            if (newStatus === "FETCHING_RESULTS") {
+              const { scheduleCrawlSync } = await import("@/lib/qstash");
+              await scheduleCrawlSync({ jobId: job.id, action: "FETCH_CHUNK", cursor: null }, 0);
+            }
+            
+            return updatedJob;
           }
         } catch (e) {
           console.error(`Status sync failed for job ${job.id}:`, e);
