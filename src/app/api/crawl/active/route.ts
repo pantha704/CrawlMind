@@ -30,6 +30,23 @@ export async function GET() {
       activeJobs.map(async (job) => {
         if (!job.cfJobId || job.cfJobId === "pending") return job;
 
+        // If job is stuck in FETCHING_RESULTS for > 3 minutes, assume QStash sync failed permanently
+        if (job.status === "FETCHING_RESULTS") {
+          const timeoutMs = 3 * 60 * 1000; // 3 minutes
+          if (Date.now() - new Date(job.updatedAt).getTime() > timeoutMs) {
+            console.error(`[ACTIVE POLLING] Job ${job.id} stuck in FETCHING_RESULTS. Marking as FAILED.`);
+            const failedJob = await prisma.crawlJob.update({
+              where: { id: job.id },
+              data: {
+                status: "FAILED",
+                error: "Timeout: Failed to download results from Cloudflare. Background sync worker may be failing.",
+              },
+            });
+            return failedJob;
+          }
+          return job; // Otherwise, just wait for QStash to finish
+        }
+
         try {
           const cfStatus = await getCrawlStatus(job.cfJobId, job.cfAccountId);
 
