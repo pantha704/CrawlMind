@@ -82,7 +82,7 @@ export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
 
   // Advanced params
   const [depth, setDepth] = useState(2);
-  const [limit, setLimit] = useState(30);
+  const [limit, setLimit] = useState(20);
   const [format, setFormat] = useState("markdown");
   const [jsRender, setJsRender] = useState(false);
   const [includeSubdomains, setIncludeSubdomains] = useState(true);
@@ -107,7 +107,7 @@ export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
         if (res.ok) {
           const data = await res.json();
           setPlanLimits(data);
-          setLimit(Math.min(100, data.maxPages));
+          setLimit(prev => Math.min(prev, data.maxPages));
         }
       } catch {
         // Fallback: Spark defaults
