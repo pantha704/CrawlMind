@@ -20,6 +20,7 @@ import {
   RotateCcw,
   RefreshCw,
   AlertTriangle,
+  ShieldAlert,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AiChatPanel } from "@/components/dashboard/ai-chat-panel";
@@ -129,6 +130,14 @@ export default function JobDetailPage() {
   const getFullExportString = () => {
     if (typeof job?.resultData === "string") return job.resultData;
     return JSON.stringify(job?.resultData, null, 2);
+  };
+
+  const getSiteOrigin = () => {
+    try {
+      return job?.resolvedUrls?.[0] ? new URL(job.resolvedUrls[0]).origin : null;
+    } catch {
+      return null;
+    }
   };
 
   if (loading) {
@@ -358,7 +367,28 @@ export default function JobDetailPage() {
                 <p className="text-sm">Downloading crawled pages from Cloudflare…</p>
                 <p className="text-xs">Large crawls may take up to 30 seconds</p>
               </div>
-            ) : currentPageContent ? (
+            ) : job.status === "COMPLETED" && completedPages.length === 0 && Array.isArray(job.resultData) ? (
+              <div className="flex flex-col items-center justify-center h-full gap-4 text-center max-w-md mx-auto">
+                <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center mb-2">
+                  <ShieldAlert className="w-6 h-6 text-amber-500" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground">Crawl Blocked by robots.txt</h3>
+                <p className="text-sm text-muted-foreground">
+                  The site owner does not allow automated crawling of this page as per their <strong>robots.txt</strong> policy, or strict anti-bot protection is enabled.
+                </p>
+                {getSiteOrigin() && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-2 text-primary border-primary/20 hover:bg-primary/10"
+                    onClick={() => window.open(`${getSiteOrigin()}/robots.txt`, '_blank', 'noopener,noreferrer')}
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    View robots.txt
+                  </Button>
+                )}
+              </div>
+            ) : currentPageContent && currentPageContent !== "[]" ? (
               job.format === "markdown" ? (
                 <MarkdownViewer content={currentPageContent} />
               ) : (
