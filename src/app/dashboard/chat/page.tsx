@@ -25,7 +25,27 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChat, Chat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
+import { DefaultChatTransport, UIMessage } from "ai";
+
+const STORAGE_KEY = (jobId: string) => `crawlmind_global_chat_${jobId}`;
+
+function loadMessages(jobId: string): UIMessage[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY(jobId));
+    return raw ? (JSON.parse(raw) as UIMessage[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveMessages(jobId: string, messages: UIMessage[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY(jobId), JSON.stringify(messages));
+  } catch {
+    // storage full — ignore
+  }
+}
 
 interface CrawlJob {
   id: string;
@@ -54,6 +74,24 @@ export default function AIChatPage() {
 
   const { messages, sendMessage, status, setMessages } = useChat({ chat });
   const loading = status === "submitted" || status === "streaming";
+
+  // 1. Load history once when job changes
+  useEffect(() => {
+    const saved = loadMessages(selectedJob);
+    if (saved.length > 0) {
+      setMessages(saved);
+    } else {
+      setMessages([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedJob]); // depend on selectedJob, not setMessages
+
+  // 2. Persist whenever messages change significantly
+  useEffect(() => {
+    if (messages.length > 0) {
+      saveMessages(selectedJob, messages);
+    }
+  }, [selectedJob, messages]);
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -151,7 +189,10 @@ export default function AIChatPage() {
           {messages.length > 0 && (
             <Button
               variant="ghost"
-              onClick={() => setMessages([])}
+              onClick={() => {
+                setMessages([]);
+                localStorage.removeItem(STORAGE_KEY(selectedJob));
+              }}
               className="h-10 px-3 text-muted-foreground hover:text-destructive shrink-0"
             >
               <Trash2 className="w-4 h-4 mr-2" />
