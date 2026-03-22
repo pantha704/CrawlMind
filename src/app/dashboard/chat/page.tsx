@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   Send,
@@ -8,7 +8,12 @@ import {
   Bot,
   User,
   Sparkles,
+  Brain,
+  ChevronRight,
+  Trash2,
 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -19,11 +24,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
-interface Message {
-  role: "user" | "assistant";
-  content: string;
-}
+import { useChat, Chat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
 
 interface CrawlJob {
   id: string;
@@ -34,12 +36,24 @@ interface CrawlJob {
 }
 
 export default function AIChatPage() {
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
   const [jobs, setJobs] = useState<CrawlJob[]>([]);
   const [selectedJob, setSelectedJob] = useState<string>("none");
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const chat = useMemo(
+    () =>
+      new Chat({
+        transport: new DefaultChatTransport({
+          api: "/api/chat",
+          body: { jobId: selectedJob },
+        }),
+      }),
+    [selectedJob]
+  );
+
+  const { messages, sendMessage, status, setMessages } = useChat({ chat });
+  const loading = status === "submitted" || status === "streaming";
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -59,76 +73,65 @@ export default function AIChatPage() {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Handle <think> blocks and markdown
+  const renderMessageContent = (textContent: string) => {
+    const thinkStart = textContent.indexOf("<think>");
+    if (thinkStart === -1) {
+      return (
+        <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:p-0">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {textContent}
+          </ReactMarkdown>
+        </div>
+      );
+    }
+
+    const thinkEnd = textContent.indexOf("</think>");
+    let think = "";
+    let content = "";
+    let isThinking = false;
+
+    if (thinkEnd === -1) {
+      // Still streaming think block
+      think = textContent.substring(thinkStart + 7);
+      content = textContent.substring(0, thinkStart);
+      isThinking = true;
+    } else {
+      think = textContent.substring(thinkStart + 7, thinkEnd);
+      content = textContent.substring(0, thinkStart) + textContent.substring(thinkEnd + 8);
+    }
+
+    return (
+      <div className="flex flex-col gap-2">
+        {think && (
+          <details className="group border border-border/50 rounded-lg bg-secondary/10 mt-1 mb-2">
+            <summary className="flex items-center gap-2 p-2 px-3 text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+              <Brain className={`w-3.5 h-3.5 ${isThinking ? 'animate-pulse text-primary' : ''}`} />
+              <span className="group-open:hidden">{isThinking ? 'Thinking...' : 'Thought Process'}</span>
+              <span className="hidden group-open:inline">Hide Thought Process</span>
+              <ChevronRight className="w-3.5 h-3.5 ml-auto transition-transform group-open:rotate-90" />
+            </summary>
+            <div className="p-3 pt-1 text-xs text-muted-foreground/80 whitespace-pre-wrap font-mono border-t border-border/10">
+              {think.trim()}
+            </div>
+          </details>
+        )}
+        {content.trim() && (
+          <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:p-0 prose-pre:bg-secondary/50 prose-pre:border prose-pre:border-border/50">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {content.trim()}
+            </ReactMarkdown>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const handleSend = async () => {
     if (!input.trim() || loading) return;
-
     const userMessage = input.trim();
     setInput("");
-    setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
-    setLoading(true);
-
-    try {
-      // If a job is selected, include context
-      let systemPrompt = "You are CrawlMind AI, a helpful assistant that helps users analyze and understand web crawl data.";
-      if (selectedJob !== "none") {
-        const jobRes = await fetch(`/api/crawl/${selectedJob}`);
-        const jobData = await jobRes.json();
-        if (jobData.job?.resultData) {
-          const resultPreview =
-            typeof jobData.job.resultData === "string"
-              ? jobData.job.resultData.slice(0, 8000)
-              : JSON.stringify(jobData.job.resultData).slice(0, 8000);
-          systemPrompt += `\n\nThe user is referencing crawl job for "${jobData.job.query}". Here is a preview of the crawl data:\n${resultPreview}`;
-        }
-      }
-
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: [
-            { role: "system", content: systemPrompt },
-            ...messages.map((m) => ({ role: m.role, content: m.content })),
-            { role: "user", content: userMessage },
-          ],
-        }),
-      });
-
-      if (!res.ok) throw new Error("Chat failed");
-
-      const reader = res.body?.getReader();
-      const decoder = new TextDecoder();
-      let assistantContent = "";
-
-      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          assistantContent += chunk;
-          setMessages((prev) => {
-            const updated = [...prev];
-            updated[updated.length - 1] = {
-              role: "assistant",
-              content: assistantContent,
-            };
-            return updated;
-          });
-        }
-      }
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "Sorry, I encountered an error. Please try again.",
-        },
-      ]);
-    } finally {
-      setLoading(false);
-    }
+    sendMessage({ text: userMessage });
   };
 
   return (
@@ -144,21 +147,33 @@ export default function AIChatPage() {
             Ask questions about your crawl data or the web in general
           </p>
         </div>
-        <Select value={selectedJob} onValueChange={(v) => { if (v) setSelectedJob(v); }}>
-          <SelectTrigger className="w-full sm:w-[280px] bg-card border-border/50">
-            <SelectValue placeholder="Select a crawl for context..." />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">No crawl context</SelectItem>
-            {jobs.map((job) => (
-              <SelectItem key={job.id} value={job.id}>
-                <span className="truncate block max-w-[220px]">
-                  {job.query}
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          {messages.length > 0 && (
+            <Button
+              variant="ghost"
+              onClick={() => setMessages([])}
+              className="h-10 px-3 text-muted-foreground hover:text-destructive shrink-0"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Clear
+            </Button>
+          )}
+          <Select value={selectedJob} onValueChange={(v) => { if (v) setSelectedJob(v); }}>
+            <SelectTrigger className="w-full sm:w-[280px] bg-card border-border/50">
+              <SelectValue placeholder="Select a crawl for context..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No crawl context</SelectItem>
+              {jobs.map((job) => (
+                <SelectItem key={job.id} value={job.id}>
+                  <span className="truncate block max-w-[220px]">
+                    {job.query}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Messages */}
@@ -194,36 +209,60 @@ export default function AIChatPage() {
           </div>
         ) : (
           <div className="space-y-4 max-w-3xl mx-auto">
-            {messages.map((msg, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`flex gap-3 ${
-                  msg.role === "user" ? "justify-end" : ""
-                }`}
-              >
-                {msg.role === "assistant" && (
-                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-1">
-                    <Bot className="w-4 h-4 text-primary" />
-                  </div>
-                )}
-                <div
-                  className={`max-w-[90%] sm:max-w-[80%] rounded-xl px-4 py-3 text-sm leading-relaxed ${
-                    msg.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-card border border-border/50"
+            {messages.map((msg) => {
+              const textContent = msg.parts
+                ? msg.parts
+                    .filter((p) => p.type === "text")
+                    .map((p) => (p as { type: "text"; text: string }).text)
+                    .join("")
+                : (msg as unknown as { content?: string }).content || "";
+
+              return (
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`flex gap-3 ${
+                    msg.role === "user" ? "justify-end" : ""
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
-                </div>
-                {msg.role === "user" && (
-                  <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center shrink-0 mt-1">
-                    <User className="w-4 h-4" />
+                  {msg.role === "assistant" && (
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-1">
+                      <Bot className="w-4 h-4 text-primary" />
+                    </div>
+                  )}
+                  <div
+                    className={`max-w-[90%] sm:max-w-[80%] rounded-xl px-4 py-3 text-sm leading-relaxed ${
+                      msg.role === "user"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-card border border-border/50 overflow-x-auto"
+                    }`}
+                  >
+                    {msg.role === "user" ? (
+                      <p className="whitespace-pre-wrap">{textContent}</p>
+                    ) : (
+                      renderMessageContent(textContent)
+                    )}
                   </div>
-                )}
-              </motion.div>
-            ))}
+                  {msg.role === "user" && (
+                    <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center shrink-0 mt-1">
+                      <User className="w-4 h-4" />
+                    </div>
+                  )}
+                </motion.div>
+              );
+            })}
+            
+            {loading && status !== "streaming" && (
+              <div className="flex gap-3">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <Bot className="w-4 h-4 text-primary" />
+                </div>
+                <div className="bg-card border border-border/50 rounded-xl px-4 py-3">
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                </div>
+              </div>
+            )}
             <div ref={scrollRef} />
           </div>
         )}
