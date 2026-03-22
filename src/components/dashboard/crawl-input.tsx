@@ -107,7 +107,7 @@ export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
         if (res.ok) {
           const data = await res.json();
           setPlanLimits(data);
-          setLimit(Math.min(30, data.maxPages));
+          setLimit(Math.min(100, data.maxPages));
         }
       } catch {
         // Fallback: Spark defaults
@@ -116,7 +116,7 @@ export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
     fetchLimits();
   }, []);
 
-  const maxPages = planLimits?.maxPages ?? 30;
+  const maxPages = planLimits?.maxPages ?? 100;
   const allowAI = planLimits?.allowAI ?? false;
   const allowJS = planLimits?.allowJS ?? false;
 

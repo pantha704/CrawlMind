@@ -29,7 +29,7 @@ export async function GET() {
     });
 
     const tierLimits = {
-      SPARK: { label: "Spark Plan", maxCrawls: 2, maxPages: 30, allowAI: false, allowJS: false },
+      SPARK: { label: "Spark Plan", maxCrawls: 5, maxPages: 100, allowAI: false, allowJS: false },
       PRO: { label: "Pro Plan", maxCrawls: 25, maxPages: 500, allowAI: true, allowJS: true },
       PRO_PLUS: { label: "Pro+ Plan", maxCrawls: 75, maxPages: 1000, allowAI: true, allowJS: true },
       SCALE: { label: "Scale Plan", maxCrawls: 150, maxPages: 5000, allowAI: true, allowJS: true },

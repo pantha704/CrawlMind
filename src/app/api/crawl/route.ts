@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     });
 
     const tierLimits = {
-      SPARK: { maxCrawls: 2, maxPages: 30, allowAI: false, allowJS: false },
+      SPARK: { maxCrawls: 5, maxPages: 100, allowAI: false, allowJS: false },
       PRO: { maxCrawls: 25, maxPages: 500, allowAI: true, allowJS: true },
       PRO_PLUS: { maxCrawls: 75, maxPages: 1000, allowAI: true, allowJS: true },
       SCALE: { maxCrawls: 150, maxPages: 5000, allowAI: true, allowJS: true },
@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
     const crawlOpts: CrawlConfig = {
       url: urls[0],
       source: body.source || "all",
-      limit: limit || 30,
+      limit: limit || 100,
       depth: depth || 2,
       formats: [format || "markdown"],
       render: render || false,

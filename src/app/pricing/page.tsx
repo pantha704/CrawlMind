@@ -28,8 +28,8 @@ const plans = [
     cta: "Get Started Free",
     inherits: null,
     features: [
-      "2 crawls per day",
-      "Up to 30 pages per crawl",
+      "5 crawls per day",
+      "Up to 100 pages per crawl",
       "Markdown + JSON output",
       "3 AI queries per crawl",
       "7-day result history",

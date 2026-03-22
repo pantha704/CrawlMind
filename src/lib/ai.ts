@@ -25,8 +25,8 @@ export const fastModel = groq("llama-3.3-70b-versatile");
 // Tier limits
 export const TIER_LIMITS = {
   SPARK: {
-    crawlsPerDay: 2,
-    maxPages: 30,
+    crawlsPerDay: 5,
+    maxPages: 100,
     aiQueriesPerCrawl: 3,
     renderAllowed: false,
     historyDays: 7,

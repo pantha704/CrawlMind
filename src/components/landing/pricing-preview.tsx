@@ -14,8 +14,8 @@ const plans = [
     cta: "Get Started Free",
     ctaVariant: "outline" as const,
     features: [
-      { text: "2 crawls per day", included: true },
-      { text: "Up to 30 pages per crawl", included: true },
+      { text: "5 crawls per day", included: true },
+      { text: "Up to 100 pages per crawl", included: true },
       { text: "Markdown + JSON output", included: true },
       { text: "3 AI queries per crawl", included: true },
       { text: "7-day result history", included: true },
