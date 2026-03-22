@@ -126,10 +126,32 @@ export default function JobDetailPage() {
     return full;
   }, [activeTab, job?.resultData, completedPages, currentPage]);
 
-  // Full export string (computed only on demand)
+  // Full export string with metadata envelope (computed on demand)
   const getFullExportString = () => {
-    if (typeof job?.resultData === "string") return job.resultData;
-    return JSON.stringify(job?.resultData, null, 2);
+    if (!job) return "";
+    
+    // For markdown/html downloads, if it's not a structured JSON array, fallback to raw
+    if (job.format !== "json" && typeof job.resultData === "string") {
+      return job.resultData; 
+    }
+
+    const exportData = {
+      _type: "crawlmind_export_v1",
+      job: {
+        query: job.query,
+        inputType: job.inputType,
+        resolvedUrls: job.resolvedUrls,
+        status: job.status,
+        config: job.config,
+        pagesCrawled: job.pagesCrawled,
+        format: job.format,
+        createdAt: job.createdAt,
+        completedAt: job.completedAt,
+        error: job.error,
+      },
+      records: job.resultData,
+    };
+    return JSON.stringify(exportData, null, 2);
   };
 
   const getSiteOrigin = () => {

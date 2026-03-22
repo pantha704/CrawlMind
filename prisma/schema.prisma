@@ -100,7 +100,8 @@ model CrawlJob {
   updatedAt    DateTime  @updatedAt
   completedAt  DateTime?
   deletedAt    DateTime? // soft-delete for archiving
-  
+  isImported   Boolean   @default(false)
+
   aiChats      AiChat[]
 
   @@index([userId])

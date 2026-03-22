@@ -32,6 +32,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRef } from "react";
+import { Upload } from "lucide-react";
 
 function InfoTip({ text }: { text: string }) {
   return (
@@ -78,7 +80,10 @@ export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
   const [query, setQuery] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [planLimits, setPlanLimits] = useState<PlanLimits | null>(null);
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Advanced params
   const [depth, setDepth] = useState(2);
@@ -170,6 +175,41 @@ export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
     }
   };
 
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    try {
+      const text = await file.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error("Invalid JSON file");
+      }
+
+      const res = await fetch("/api/crawl/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Failed to import crawl");
+
+      toast.success("Crawl imported successfully!");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      
+      // Redirect directly to the imported job
+      window.location.href = `/dashboard/jobs/${result.jobId}`;
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to import crawl");
+    } finally {
+      setImporting(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Smart input — unified */}
@@ -219,24 +259,47 @@ export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
           )}
           Advanced Parameters
         </button>
-        <Button
-          onClick={handleSubmit}
-          disabled={loading || !query.trim()}
-          className="glow-cyan"
-          size="lg"
-        >
-          {loading ? (
-            <>
+        <div className="flex items-center gap-3">
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            accept=".json"
+            onChange={handleImport}
+          />
+          <Button
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={loading || importing}
+            className="border-primary/20 text-primary hover:bg-primary/10"
+            size="lg"
+          >
+            {importing ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Starting...
-            </>
-          ) : (
-            <>
-              <Rocket className="w-4 h-4 mr-2" />
-              Start Crawl
-            </>
-          )}
-        </Button>
+            ) : (
+              <Upload className="w-4 h-4 mr-2" />
+            )}
+            Import Crawl
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={loading || !query.trim()}
+            className="glow-cyan"
+            size="lg"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Starting...
+              </>
+            ) : (
+              <>
+                <Rocket className="w-4 h-4 mr-2" />
+                Start Crawl
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Advanced panel */}
