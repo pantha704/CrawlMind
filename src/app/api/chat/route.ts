@@ -64,19 +64,26 @@ ${resultPreview || "No content extracted yet — the crawl may still be in progr
 - Be concise and direct.`;
     }
 
+    const systemMessage = messages.find((m: UIMessage) => (m.role as string) === "system");
+    const uiMessages = messages.filter((m: UIMessage) => (m.role as string) !== "system");
+
+    if (systemMessage && !systemPrompt) {
+      systemPrompt = (systemMessage as unknown as { content?: string }).content || "";
+    }
+
     // Try primary model, fallback to fast model
     let result;
     try {
       result = streamText({
         model: chatModel,
         ...(systemPrompt ? { system: systemPrompt } : {}),
-        messages: await convertToModelMessages(messages),
+        messages: await convertToModelMessages(uiMessages),
       });
     } catch {
       result = streamText({
         model: fastModel,
         ...(systemPrompt ? { system: systemPrompt } : {}),
-        messages: await convertToModelMessages(messages),
+        messages: await convertToModelMessages(uiMessages),
       });
     }
 
