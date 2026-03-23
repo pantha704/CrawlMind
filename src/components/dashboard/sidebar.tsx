@@ -10,10 +10,11 @@ import {
   FolderOpen,
   BarChart3,
   Settings,
-  BookOpen,
   Plus,
   LogOut,
   Sprout,
+  ShieldCheck,
+  MessageCircleQuestion,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -44,6 +45,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     crawlsToday: 0,
     maxCrawls: 2,
     usagePercent: 0,
+    isAdmin: false,
   });
 
   useEffect(() => {
@@ -105,15 +107,29 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
         <Separator className="my-3 bg-sidebar-border" />
 
-        <a
-          href="https://developers.cloudflare.com/browser-rendering/rest-api/crawl/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors"
+        {usage.isAdmin && (
+          <Link
+            href="/dashboard/admin"
+            onClick={onNavigate}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200",
+              pathname.startsWith("/dashboard/admin")
+                ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+            )}
+          >
+            <ShieldCheck className="w-4 h-4" />
+            Admin Panel
+          </Link>
+        )}
+
+        <button
+          onClick={() => window.dispatchEvent(new Event('open-feedback-modal'))}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors"
         >
-          <BookOpen className="w-4 h-4" />
-          Docs
-        </a>
+          <MessageCircleQuestion className="w-4 h-4" />
+          Send Feedback
+        </button>
       </nav>
 
       {/* Bottom: Plan & Usage */}

@@ -1,8 +1,7 @@
 "use client";
 
-import { Search, Bell, Menu } from "lucide-react";
+import { Search, Menu, MessageSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -71,10 +70,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
           {usage.crawlsToday}/{usage.maxCrawls} crawls today
         </span>
 
-        {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="w-4 h-4" />
-        </Button>
+        {/* Notifications (Removed Bell icon) */}
 
         {/* User avatar */}
         <DropdownMenu>
@@ -102,6 +98,12 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                 <Link href="/pricing" className="flex w-full">Upgrade Plan</Link>
               </DropdownMenuItem>
             )}
+            
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => window.dispatchEvent(new Event('open-feedback-modal'))} className="cursor-pointer flex w-full">
+              <MessageSquare className="w-4 h-4 mr-2" />
+              Send Feedback
+            </DropdownMenuItem>
             
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-destructive cursor-pointer" onClick={handleLogout}>

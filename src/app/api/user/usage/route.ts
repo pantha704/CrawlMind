@@ -38,6 +38,9 @@ export async function GET() {
     const userPlan = (dbUser?.plan as keyof typeof tierLimits) || "SPARK";
     const limits = tierLimits[userPlan] || tierLimits.SPARK;
 
+    const adminEmails = process.env.ADMIN_EMAILS?.split(",").map(e => e.trim().toLowerCase()) || [];
+    const isAdmin = adminEmails.includes(session.user.email.toLowerCase());
+
     return NextResponse.json({
       plan: userPlan,
       planLabel: limits.label,
@@ -47,6 +50,7 @@ export async function GET() {
       allowAI: limits.allowAI,
       allowJS: limits.allowJS,
       usagePercent: Math.min(100, (crawlsToday / limits.maxCrawls) * 100),
+      isAdmin,
     });
   } catch (error) {
     console.error("Usage API error:", error);

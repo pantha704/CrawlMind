@@ -16,6 +16,13 @@ export async function POST(req: NextRequest) {
 
     const userId = session.user.id;
 
+    if (!session.user.emailVerified) {
+      return NextResponse.json(
+        { error: "Please verify your email address before running crawls." },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
     const { query, inputType, depth, format, render, includeSubdomains, includeExternalLinks } = body;
     let limit = body.limit;

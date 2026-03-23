@@ -76,6 +76,13 @@ export default function JobDetailPage() {
   }, [jobId]);
 
   useEffect(() => {
+    return () => {
+      // Trigger feedback check when navigating away from job details
+      window.dispatchEvent(new Event("trigger-feedback-check"));
+    };
+  }, []);
+
+  useEffect(() => {
     async function fetchJob() {
       try {
         const res = await fetch(`/api/crawl/${jobId}`);

@@ -8,26 +8,27 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id            String   @id @default(cuid())
   name          String
-  email         String    @unique
+  email         String   @unique
   emailVerified Boolean
   image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
   // Custom CrawlMind fields
-  plan                   String   @default("SPARK") // SPARK, PRO, PRO_PLUS, SCALE
-  razorpayCustomerId     String?  @unique
-  razorpaySubscriptionId String?  @unique
-  
+  plan                   String  @default("SPARK") // SPARK, PRO, PRO_PLUS, SCALE
+  razorpayCustomerId     String? @unique
+  razorpaySubscriptionId String? @unique
+
   // Relationships
-  sessions    Session[]
-  accounts    Account[]
-  crawlJobs   CrawlJob[]
-  aiChats     AiChat[]
+  sessions     Session[]
+  accounts     Account[]
+  crawlJobs    CrawlJob[]
+  aiChats      AiChat[]
   searchEvents SearchEvent[]
-  invoices    Invoice[]
+  invoices     Invoice[]
+  feedbacks    Feedback[]
 
   @@map("user")
 }
@@ -86,37 +87,37 @@ model CrawlJob {
   userId       String
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   cfJobId      String?
-  cfAccountId  String?   // The specific CF account ID used for this job
-  query        String    // original user query or URL
-  inputType    String    // "URL" or "AI"
-  resolvedUrls String[]  // resulting URLs to crawl
+  cfAccountId  String? // The specific CF account ID used for this job
+  query        String // original user query or URL
+  inputType    String // "URL" or "AI"
+  resolvedUrls String[] // resulting URLs to crawl
   status       String    @default("QUEUED") // QUEUED, RUNNING, COMPLETED, FAILED
-  config       Json      // full cloudflare crawl config + AI config
-  resultData   Json?     // store the final aggregated result
+  config       Json // full cloudflare crawl config + AI config
+  resultData   Json? // store the final aggregated result
   pagesCrawled Int       @default(0)
   format       String    @default("markdown") // html, markdown, json
-  error        String?   // error message if failed
+  error        String? // error message if failed
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   completedAt  DateTime?
   deletedAt    DateTime? // soft-delete for archiving
   isImported   Boolean   @default(false)
 
-  aiChats      AiChat[]
+  aiChats AiChat[]
 
   @@index([userId])
   @@index([status])
 }
 
 model AiChat {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  crawlJobId  String
-  crawlJob    CrawlJob @relation(fields: [crawlJobId], references: [id], onDelete: Cascade)
-  messages    Json     // Array of chat messages
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  crawlJobId String
+  crawlJob   CrawlJob @relation(fields: [crawlJobId], references: [id], onDelete: Cascade)
+  messages   Json // Array of chat messages
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([userId])
   @@index([crawlJobId])
@@ -128,7 +129,7 @@ model SearchEvent {
   user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   queryText     String
   queryType     String   @default("URL") // URL or PLAINTEXT
-  topicCategory String?  // AI classified topic
+  topicCategory String? // AI classified topic
   resolvedUrls  String[]
   aiModelUsed   String?
   createdAt     DateTime @default(now())
@@ -143,12 +144,25 @@ model Invoice {
   user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   razorpayPaymentId      String   @unique
   razorpaySubscriptionId String
-  plan                   String   // PRO, PRO_PLUS, SCALE
-  amountPaise            Int      // amount in paise
+  plan                   String // PRO, PRO_PLUS, SCALE
+  amountPaise            Int // amount in paise
   currency               String   @default("INR")
   status                 String   @default("PAID") // PAID, REFUNDED
   invoiceNumber          String   @unique // e.g. "CM-20260318-001"
   createdAt              DateTime @default(now())
-  
+
   @@index([userId])
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating    Int // e.g. 1-5
+  message   String?
+  page      String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("feedback")
 }

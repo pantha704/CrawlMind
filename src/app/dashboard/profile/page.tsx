@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useSession } from "@/lib/auth-client";
 
 interface UserProfile {
   id: string;
@@ -20,6 +21,7 @@ interface UserProfile {
 }
 
 export default function ProfilePage() {
+  const { data: session } = useSession();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -29,23 +31,30 @@ export default function ProfilePage() {
 
 
   useEffect(() => {
-    fetchProfile();
-  }, []);
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch("/api/user/profile");
+        if (!res.ok) throw new Error("Failed to fetch profile");
+        const data = await res.json();
+        setProfile(data);
+        setName(data.name || "");
+        
+        // Auto-populate from OAuth session if DB is empty
+        if (!data.image && session?.user?.image) {
+          setImage(session.user.image);
+          // We could auto-save here, but let's let the user hit Save
+        } else {
+          setImage(data.image || "");
+        }
+      } catch {
+        toast.error("Could not load profile");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const fetchProfile = async () => {
-    try {
-      const res = await fetch("/api/user/profile");
-      if (!res.ok) throw new Error("Failed to fetch profile");
-      const data = await res.json();
-      setProfile(data);
-      setName(data.name || "");
-      setImage(data.image || "");
-    } catch {
-      toast.error("Could not load profile");
-    } finally {
-      setLoading(false);
-    }
-  };
+    fetchProfile();
+  }, [session]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
