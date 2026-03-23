@@ -41,7 +41,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const [usage, setUsage] = useState({
     plan: "SPARK",
-    planLabel: "Spark Plan",
+    planName: "Spark",
     crawlsToday: 0,
     maxCrawls: 2,
     usagePercent: 0,
@@ -136,7 +136,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <div className="p-4 border-t border-sidebar-border space-y-3">
         <div className="flex items-center justify-between text-xs">
           <span className="px-2 py-0.5 rounded-full bg-primary/20 text-primary font-medium">
-            {usage.planLabel}
+            {usage.planName}
           </span>
           <span className="text-sidebar-foreground/50">
             {usage.crawlsToday}/{usage.maxCrawls} today

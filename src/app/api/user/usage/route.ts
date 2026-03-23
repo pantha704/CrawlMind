@@ -38,6 +38,7 @@ export async function GET() {
     return NextResponse.json({
       plan: userPlan,
       planLabel: limits.label,
+      planName: limits.name,
       crawlsToday,
       maxCrawls: limits.maxCrawls,
       maxPages: limits.maxPages,

@@ -180,6 +180,7 @@ export function getTierLimits(planId: string) {
   const plan = getPlan(planId);
   return {
     label: plan.label,
+    name: plan.ui.name,
     maxCrawls: plan.limits.maxCrawlsPerDay,
     maxPages: plan.limits.maxPagesPerCrawl,
     allowAI: plan.limits.allowAI,
