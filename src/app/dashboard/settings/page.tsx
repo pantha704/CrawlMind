@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { getPlan } from "@/config/plans";
 import {
   Card,
   CardContent,
@@ -49,14 +50,8 @@ export default async function SettingsPage() {
     },
   });
 
-  const planMap: Record<string, { name: string; maxCrawls: number }> = {
-    SPARK: { name: "Spark (Free)", maxCrawls: 2 },
-    PRO: { name: "Pro (₹999/mo)", maxCrawls: 25 },
-    PRO_PLUS: { name: "Pro+ (₹1,999/mo)", maxCrawls: 75 },
-    SCALE: { name: "Scale (₹3,299/mo)", maxCrawls: 150 },
-  };
-
-  const currentPlan = planMap[dbUser.plan] || planMap.SPARK;
+  const planConfig = getPlan(dbUser.plan);
+  const currentPlan = { name: planConfig.label, maxCrawls: planConfig.limits.maxCrawlsPerDay };
 
   return (
     <div className="max-w-4xl space-y-8">

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { startCrawlJob, type CrawlConfig } from "@/lib/cloudflare";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { getTierLimits } from "@/config/plans";
 
 export async function POST(req: NextRequest) {
   try {
@@ -47,31 +48,24 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    const tierLimits = {
-      SPARK: { maxCrawls: 5, maxPages: 100, allowAI: false, allowJS: false },
-      PRO: { maxCrawls: 25, maxPages: 100, allowAI: true, allowJS: true },
-      PRO_PLUS: { maxCrawls: 75, maxPages: 100, allowAI: true, allowJS: true },
-      SCALE: { maxCrawls: 150, maxPages: 100, allowAI: true, allowJS: true },
-    };
+    const { maxCrawls, maxPages, allowAI, allowJS } = getTierLimits(dbUser?.plan || "SPARK");
+    const userPlan = dbUser?.plan || "SPARK";
 
-    const userPlan = (dbUser?.plan as keyof typeof tierLimits) || "SPARK";
-    const limits = tierLimits[userPlan];
-
-    if (crawlsToday >= limits.maxCrawls) {
+    if (crawlsToday >= maxCrawls) {
       return NextResponse.json(
         { error: `Daily limit reached for ${userPlan} plan` },
         { status: 403 }
       );
     }
 
-    if (inputType === "PLAINTEXT" && !limits.allowAI) {
+    if (inputType === "PLAINTEXT" && !allowAI) {
       return NextResponse.json(
         { error: "AI URL discovery requires PRO plan or higher" },
         { status: 403 }
       );
     }
 
-    if (render && !limits.allowJS) {
+    if (render && !allowJS) {
       return NextResponse.json(
         { error: "JS rendering requires PRO plan or higher" },
         { status: 403 }
@@ -79,8 +73,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Enforce max pages limit quietly
-    if (!limit || limit > limits.maxPages) {
-      limit = limits.maxPages;
+    if (!limit || limit > maxPages) {
+      limit = maxPages;
     }
 
     // Resolve URLs

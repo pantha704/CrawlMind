@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { getTierLimits } from "@/config/plans";
 
 export async function GET() {
   try {
@@ -28,15 +29,8 @@ export async function GET() {
       },
     });
 
-    const tierLimits = {
-      SPARK: { label: "Spark Plan", maxCrawls: 5, maxPages: 100, allowAI: false, allowJS: false },
-      PRO: { label: "Pro Plan", maxCrawls: 25, maxPages: 100, allowAI: true, allowJS: true },
-      PRO_PLUS: { label: "Pro+ Plan", maxCrawls: 75, maxPages: 100, allowAI: true, allowJS: true },
-      SCALE: { label: "Scale Plan", maxCrawls: 150, maxPages: 100, allowAI: true, allowJS: true },
-    };
-
-    const userPlan = (dbUser?.plan as keyof typeof tierLimits) || "SPARK";
-    const limits = tierLimits[userPlan] || tierLimits.SPARK;
+    const userPlan = dbUser?.plan || "SPARK";
+    const limits = getTierLimits(userPlan);
 
     const adminEmails = process.env.ADMIN_EMAILS?.split(",").map(e => e.trim().toLowerCase()) || [];
     const isAdmin = adminEmails.includes(session.user.email.toLowerCase());

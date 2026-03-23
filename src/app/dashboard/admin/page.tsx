@@ -1,88 +1,85 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Loader2, Users, Download, Eye, FileText, ArrowUpRight } from "lucide-react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  PieChart,
-  Pie,
-  Cell,
-  Legend
-} from 'recharts';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+// Dynamically import charts with SSR disabled — the canonical fix for Recharts + Next.js
+const AdminCharts = dynamic(() => import("./admin-charts"), {
+  ssr: false,
+  loading: () => (
+    <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
+      <div className="lg:col-span-2 rounded-lg border bg-card p-6 h-[370px] flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+      <div className="flex flex-col gap-4 lg:col-span-1">
+        <div className="rounded-lg border bg-card p-6 h-[260px] flex items-center justify-center">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        </div>
+        <div className="rounded-lg border bg-card p-6 h-[260px] flex items-center justify-center">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    </div>
+  ),
+});
 
-function useContainerSize(ref: React.RefObject<HTMLDivElement | null>) {
-  const [size, setSize] = useState({ width: 0, height: 0 });
+interface TopUser {
+  id: string;
+  name: string;
+  email: string;
+  image: string | null;
+  plan: string;
+  crawlCount: number;
+  totalPages: number;
+  createdAt: string;
+}
 
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (entry) {
-        setSize({
-          width: Math.floor(entry.contentRect.width),
-          height: Math.floor(entry.contentRect.height),
-        });
-      }
-    });
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [ref]);
-
-  return size;
+interface AdminData {
+  overview: {
+    totalUsers: number;
+    subscribedUsers: number;
+    freeUsers: number;
+    verifiedUsers: number;
+    unverifiedUsers: number;
+    totalCrawls: number;
+    totalPagesFetched: number;
+    totalImportedJobs: number;
+  };
+  planDistribution: { name: string; value: number }[];
+  verificationDistribution: { name: string; value: number }[];
+  dailyUsage: { date: string; crawls: number; pages: number }[];
+  topUsers: TopUser[];
 }
 
 export default function AdminDashboardPage() {
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<AdminData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
-
-  const lineChartRef = useRef<HTMLDivElement>(null);
-  const planPieRef = useRef<HTMLDivElement>(null);
-  const verifyPieRef = useRef<HTMLDivElement>(null);
-
-  const lineSize = useContainerSize(lineChartRef);
-  const planSize = useContainerSize(planPieRef);
-  const verifySize = useContainerSize(verifyPieRef);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch("/api/admin/stats");
+        if (!res.ok) {
+          throw new Error(res.status === 403 ? "Forbidden: Admins only" : "Failed to fetch stats");
+        }
+        const json = await res.json();
+        setData(json);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Unknown error");
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchStats();
   }, []);
-
-  const fetchStats = async () => {
-    try {
-      const res = await fetch("/api/admin/stats");
-      if (!res.ok) {
-        throw new Error(res.status === 403 ? "Forbidden: Admins only" : "Failed to fetch stats");
-      }
-      const json = await res.json();
-      setData(json);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -101,227 +98,126 @@ export default function AdminDashboardPage() {
     );
   }
 
+  if (!data) return null;
+
   const { overview, planDistribution, verificationDistribution, dailyUsage, topUsers } = data;
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-32">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h1>
-            <p className="text-muted-foreground">Admin-only overview of total platform usage and metrics.</p>
-          </div>
+      <div className="space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h1>
+        <p className="text-muted-foreground">Admin-only overview of total platform usage and metrics.</p>
+      </div>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{overview.totalUsers}</div>
-                <div className="text-xs text-muted-foreground mt-1 flex flex-col gap-1">
-                  <span>{overview.subscribedUsers} Subscribed, {overview.freeUsers} Free</span>
-                  <span className="text-primary/90">{overview.verifiedUsers} Verified, {overview.unverifiedUsers} Unverified</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Crawl Jobs</CardTitle>
-                <Eye className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{overview.totalCrawls}</div>
-                <p className="text-xs text-muted-foreground">Across all users globally</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pages Fetched</CardTitle>
-                <FileText className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{overview.totalPagesFetched.toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground">Successfully crawled pages</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Imported Jobs</CardTitle>
-                <Download className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{overview.totalImportedJobs}</div>
-                <p className="text-xs text-muted-foreground">Jobs imported from downloads</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            
-            <Card className="col-span-1 lg:col-span-2">
-              <CardHeader>
-                <CardTitle>Usage Over Last 30 Days</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div ref={lineChartRef} style={{ width: '100%', height: 280, minWidth: 0 }}>
-                  {mounted && lineSize.width > 0 ? (
-                    <LineChart width={lineSize.width} height={280} data={dailyUsage} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" />
-                      <XAxis 
-                        dataKey="date" 
-                        tickFormatter={(val) => new Date(val).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                        stroke="#888888"
-                        fontSize={12}
-                      />
-                      <YAxis 
-                        yAxisId="left" 
-                        stroke="#888888" 
-                        fontSize={12} 
-                        tickFormatter={(value) => `${value}`}
-                      />
-                      <YAxis 
-                        yAxisId="right" 
-                        orientation="right" 
-                        stroke="#888888" 
-                        fontSize={12} 
-                        tickFormatter={(value) => `${value}`}
-                      />
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: '#111', border: '1px solid #333' }}
-                        itemStyle={{ color: '#fff' }}
-                      />
-                      <Legend />
-                      <Line yAxisId="left" type="monotone" dataKey="crawls" stroke="#00C49F" name="New Crawls" strokeWidth={2} dot={false} />
-                      <Line yAxisId="right" type="monotone" dataKey="pages" stroke="#0088FE" name="Pages Fetched" strokeWidth={2} dot={false} />
-                    </LineChart>
-                  ) : (
-                    <div className="flex items-center justify-center h-full"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <div className="flex flex-col gap-4 col-span-1">
-              <Card className="flex-1">
-                <CardHeader className="pb-2">
-                  <CardTitle>Plan Distribution</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div ref={planPieRef} style={{ width: '100%', height: 200, minWidth: 0 }}>
-                    {mounted && planSize.width > 0 ? (
-                      <PieChart width={planSize.width} height={200}>
-                        <Pie
-                          data={planDistribution}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={40}
-                          outerRadius={65}
-                          paddingAngle={5}
-                          dataKey="value"
-                        >
-                          {planDistribution.map((_entry: { name: string; value: number }, index: number) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip contentStyle={{ backgroundColor: '#111', border: '1px solid #333' }} />
-                        <Legend verticalAlign="bottom" height={24} iconSize={10}/>
-                      </PieChart>
-                    ) : (
-                      <div className="flex items-center justify-center h-full"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="flex-1">
-                <CardHeader className="pb-2">
-                  <CardTitle>User Verification</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div ref={verifyPieRef} style={{ width: '100%', height: 200, minWidth: 0 }}>
-                    {mounted && verifySize.width > 0 ? (
-                      <PieChart width={verifySize.width} height={200}>
-                        <Pie
-                          data={verificationDistribution}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={40}
-                          outerRadius={65}
-                          paddingAngle={5}
-                          dataKey="value"
-                        >
-                          {verificationDistribution.map((_entry: { name: string; value: number }, index: number) => (
-                            <Cell key={`cell-${index}`} fill={['#00C49F', '#FF8042'][index % 2]} />
-                          ))}
-                        </Pie>
-                        <Tooltip contentStyle={{ backgroundColor: '#111', border: '1px solid #333' }} />
-                        <Legend verticalAlign="bottom" height={24} iconSize={10}/>
-                      </PieChart>
-                    ) : (
-                      <div className="flex items-center justify-center h-full"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{overview.totalUsers}</div>
+            <div className="text-xs text-muted-foreground mt-1 flex flex-col gap-1">
+              <span>{overview.subscribedUsers} Subscribed, {overview.freeUsers} Free</span>
+              <span className="text-primary/90">{overview.verifiedUsers} Verified, {overview.unverifiedUsers} Unverified</span>
             </div>
+          </CardContent>
+        </Card>
 
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Crawl Jobs</CardTitle>
+            <Eye className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{overview.totalCrawls}</div>
+            <p className="text-xs text-muted-foreground">Across all users globally</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pages Fetched</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{overview.totalPagesFetched.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Successfully crawled pages</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Imported Jobs</CardTitle>
+            <Download className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{overview.totalImportedJobs}</div>
+            <p className="text-xs text-muted-foreground">Jobs imported from downloads</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts — dynamically loaded, no SSR */}
+      <AdminCharts
+        dailyUsage={dailyUsage}
+        planDistribution={planDistribution}
+        verificationDistribution={verificationDistribution}
+      />
+
+      {/* Top Users Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Top Users (By Crawls)</CardTitle>
+          <CardDescription>Click a user row for detailed analytics.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-auto max-h-[400px]">
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs uppercase bg-muted text-muted-foreground sticky top-0 z-10">
+                <tr>
+                  <th className="px-4 py-3 font-medium">User</th>
+                  <th className="px-4 py-3 font-medium">Plan</th>
+                  <th className="px-4 py-3 font-medium text-right">Crawls</th>
+                  <th className="px-4 py-3 font-medium text-right">Pages</th>
+                  <th className="px-4 py-3 font-medium text-right">Joined</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topUsers.map((user) => (
+                  <tr key={user.id} className="border-b border-border hover:bg-muted/50 transition-colors group">
+                    <td className="px-4 py-3">
+                      <Link href={`/dashboard/admin/users/${user.id}`} className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={user.image || undefined} alt={user.name} />
+                          <AvatarFallback>{user.name?.[0]?.toUpperCase() || "U"}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium flex items-center gap-2 group-hover:text-primary transition-colors">
+                            {user.name} <ArrowUpRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                          <div className="text-xs text-muted-foreground">{user.email}</div>
+                        </div>
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge variant={user.plan === "SPARK" ? "outline" : "default"}>
+                        {user.plan}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-right font-medium">{user.crawlCount}</td>
+                    <td className="px-4 py-3 text-right">{user.totalPages?.toLocaleString() || 0}</td>
+                    <td className="px-4 py-3 text-right text-muted-foreground whitespace-nowrap">
+                      {formatDistanceToNow(new Date(user.createdAt), { addSuffix: true })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Top Users (By Crawls)</CardTitle>
-              <CardDescription>Click a user row for detailed analytics.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-auto max-h-[400px]">
-                <table className="w-full text-sm text-left">
-                  <thead className="text-xs uppercase bg-muted text-muted-foreground sticky top-0 z-10">
-                    <tr>
-                      <th className="px-4 py-3 font-medium">User</th>
-                      <th className="px-4 py-3 font-medium">Plan</th>
-                      <th className="px-4 py-3 font-medium text-right">Crawls</th>
-                      <th className="px-4 py-3 font-medium text-right">Pages</th>
-                      <th className="px-4 py-3 font-medium text-right">Joined</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {topUsers.map((user: any) => (
-                      <tr key={user.id} className="border-b border-border hover:bg-muted/50 transition-colors group">
-                        <td className="px-4 py-3">
-                          <Link href={`/dashboard/admin/users/${user.id}`} className="flex items-center gap-3">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={user.image} alt={user.name} />
-                              <AvatarFallback>{user.name?.[0]?.toUpperCase() || "U"}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <div className="font-medium flex items-center gap-2 group-hover:text-primary transition-colors">
-                                {user.name} <ArrowUpRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                              </div>
-                              <div className="text-xs text-muted-foreground">{user.email}</div>
-                            </div>
-                          </Link>
-                        </td>
-                        <td className="px-4 py-3">
-                          <Badge variant={user.plan === "SPARK" ? "outline" : "default"}>
-                            {user.plan}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3 text-right font-medium">{user.crawlCount}</td>
-                        <td className="px-4 py-3 text-right">{user.totalPages?.toLocaleString() || 0}</td>
-                        <td className="px-4 py-3 text-right text-muted-foreground whitespace-nowrap">
-                          {formatDistanceToNow(new Date(user.createdAt), { addSuffix: true })}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-
+        </CardContent>
+      </Card>
     </div>
   );
 }
