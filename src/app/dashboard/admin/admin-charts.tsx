@@ -1,26 +1,38 @@
 "use client";
 
 import {
-  LineChart,
-  Line,
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Label,
+  Pie,
+  PieChart,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
 } from "recharts";
+
+import {
+  type ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from "@/components/ui/chart";
+
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
+/* ------------------------------------------------------------------ */
+/*  Types                                                             */
+/* ------------------------------------------------------------------ */
 
 interface ChartDataEntry {
   name: string;
@@ -39,190 +51,272 @@ interface AdminChartsProps {
   verificationDistribution: ChartDataEntry[];
 }
 
+/* ------------------------------------------------------------------ */
+/*  Chart configs (shadcn pattern — defines colors + labels)          */
+/* ------------------------------------------------------------------ */
+
+const usageConfig: ChartConfig = {
+  crawls: {
+    label: "Crawls",
+    color: "var(--chart-1)",
+  },
+  pages: {
+    label: "Pages Fetched",
+    color: "var(--chart-2)",
+  },
+};
+
+const PLAN_COLORS: Record<string, string> = {
+  SPARK: "var(--chart-1)",
+  PRO: "var(--chart-2)",
+  PRO_PLUS: "var(--chart-3)",
+  SCALE: "var(--chart-4)",
+};
+
+const VERIFICATION_COLORS: Record<string, string> = {
+  Verified: "var(--chart-2)",
+  Unverified: "var(--chart-5)",
+};
+
+/* ------------------------------------------------------------------ */
+/*  Component                                                         */
+/* ------------------------------------------------------------------ */
+
 export default function AdminCharts({
   dailyUsage,
   planDistribution,
   verificationDistribution,
 }: AdminChartsProps) {
+  // Build dynamic chart configs from data
+  const planConfig: ChartConfig = Object.fromEntries(
+    planDistribution.map((entry) => [
+      entry.name,
+      { label: entry.name, color: PLAN_COLORS[entry.name] ?? "var(--chart-4)" },
+    ])
+  );
+
+  const verifyConfig: ChartConfig = Object.fromEntries(
+    verificationDistribution.map((entry) => [
+      entry.name,
+      {
+        label: entry.name,
+        color: VERIFICATION_COLORS[entry.name] ?? "var(--chart-3)",
+      },
+    ])
+  );
+
+  const totalUsers = verificationDistribution.reduce((s, e) => s + e.value, 0);
+
   return (
-    <div className="grid gap-4 grid-cols-1 lg:grid-cols-4">
-      {/* Line Chart — spans 3 cols on large screens to align with top stats */}
-      <Card className="lg:col-span-3">
+    <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
+      {/* ── Area Chart: Usage over 30 days ─────────────────────── */}
+      <Card className="lg:col-span-4">
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Usage Over Last 30 Days</CardTitle>
+          <CardDescription>Daily crawls and pages fetched</CardDescription>
         </CardHeader>
-        <CardContent className="pl-2 pr-4">
-          <div style={{ width: "100%", height: 280 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={dailyUsage}
-                margin={{ top: 5, right: 10, bottom: 5, left: 0 }}
-              >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  vertical={false}
-                  stroke="hsl(var(--border))"
-                />
-                <XAxis
-                  dataKey="date"
-                  tickFormatter={(val) =>
-                    new Date(val).toLocaleDateString(undefined, {
-                      month: "short",
-                      day: "numeric",
-                    })
-                  }
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  yAxisId="left"
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(value) => `${value}`}
-                />
-                <YAxis
-                  yAxisId="right"
-                  orientation="right"
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(value) => `${value}`}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "var(--radius)",
-                  }}
-                  labelStyle={{ color: "hsl(var(--foreground))" }}
-                  itemStyle={{ color: "hsl(var(--foreground))" }}
-                />
-                <Legend
-                  verticalAlign="bottom"
-                  height={28}
-                  iconSize={10}
-                  wrapperStyle={{ fontSize: 12 }}
-                />
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="crawls"
-                  stroke="#00C49F"
-                  name="New Crawls"
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={{ r: 4 }}
-                />
-                <Line
-                  yAxisId="right"
-                  type="monotone"
-                  dataKey="pages"
-                  stroke="#0088FE"
-                  name="Pages Fetched"
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={{ r: 4 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+        <CardContent className="px-2 pt-4 sm:px-6 sm:pt-0">
+          <ChartContainer
+            config={usageConfig}
+            className="aspect-auto h-[280px] w-full"
+          >
+            <AreaChart
+              accessibilityLayer
+              data={dailyUsage}
+              margin={{ top: 5, right: 10, bottom: 0, left: 0 }}
+            >
+              <defs>
+                <linearGradient id="fillCrawls" x1="0" y1="0" x2="0" y2="1">
+                  <stop
+                    offset="5%"
+                    stopColor="var(--color-crawls)"
+                    stopOpacity={0.8}
+                  />
+                  <stop
+                    offset="95%"
+                    stopColor="var(--color-crawls)"
+                    stopOpacity={0.1}
+                  />
+                </linearGradient>
+                <linearGradient id="fillPages" x1="0" y1="0" x2="0" y2="1">
+                  <stop
+                    offset="5%"
+                    stopColor="var(--color-pages)"
+                    stopOpacity={0.8}
+                  />
+                  <stop
+                    offset="95%"
+                    stopColor="var(--color-pages)"
+                    stopOpacity={0.1}
+                  />
+                </linearGradient>
+              </defs>
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="date"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                minTickGap={32}
+                tickFormatter={(val) =>
+                  new Date(val).toLocaleDateString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                  })
+                }
+              />
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                width={32}
+              />
+              <ChartTooltip
+                cursor={false}
+                content={
+                  <ChartTooltipContent
+                    labelFormatter={(val) =>
+                      new Date(val).toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })
+                    }
+                    indicator="dot"
+                  />
+                }
+              />
+              <Area
+                dataKey="pages"
+                type="natural"
+                fill="url(#fillPages)"
+                stroke="var(--color-pages)"
+                strokeWidth={2}
+                stackId="a"
+              />
+              <Area
+                dataKey="crawls"
+                type="natural"
+                fill="url(#fillCrawls)"
+                stroke="var(--color-crawls)"
+                strokeWidth={2}
+                stackId="b"
+              />
+              <ChartLegend content={<ChartLegendContent />} />
+            </AreaChart>
+          </ChartContainer>
         </CardContent>
       </Card>
 
-      {/* Right column — two pie charts stacked */}
-      <div className="flex flex-col gap-4 lg:col-span-1">
-        <Card className="flex-1">
-          <CardHeader className="pb-0">
+      {/* ── Right column: Plan Distribution + Verification ────── */}
+      <div className="grid gap-4 lg:col-span-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-1">
+        {/* Plan Distribution — Horizontal Bar */}
+        <Card>
+          <CardHeader className="pb-2">
             <CardTitle className="text-base">Plan Distribution</CardTitle>
+            <CardDescription>Users per subscription plan</CardDescription>
           </CardHeader>
-          <CardContent className="pb-4">
-            <div style={{ width: "100%", height: 180 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={planDistribution}
-                    cx="40%"
-                    cy="50%"
-                    innerRadius={45}
-                    outerRadius={75}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {planDistribution.map((_entry, index) => (
-                      <Cell
-                        key={`plan-${index}`}
-                        fill={COLORS[index % COLORS.length]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "var(--radius)",
-                    }}
-                    itemStyle={{ color: "hsl(var(--foreground))" }}
-                  />
-                  <Legend
-                    layout="vertical"
-                    align="right"
-                    verticalAlign="middle"
-                    iconSize={8}
-                    wrapperStyle={{ fontSize: 12 }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+          <CardContent>
+            <ChartContainer
+              config={planConfig}
+              className="mx-auto aspect-square max-h-[220px]"
+            >
+              <BarChart
+                accessibilityLayer
+                data={planDistribution}
+                layout="vertical"
+                margin={{ left: 0 }}
+              >
+                <YAxis
+                  dataKey="name"
+                  type="category"
+                  tickLine={false}
+                  tickMargin={10}
+                  axisLine={false}
+                />
+                <XAxis dataKey="value" type="number" hide />
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent hideLabel />}
+                />
+                <Bar
+                  dataKey="value"
+                  radius={5}
+                  fill="var(--chart-1)"
+                  barSize={28}
+                >
+                  {planDistribution.map((entry) => (
+                    <rect
+                      key={entry.name}
+                      fill={PLAN_COLORS[entry.name] ?? "var(--chart-4)"}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ChartContainer>
           </CardContent>
         </Card>
 
-        <Card className="flex-1">
-          <CardHeader className="pb-0">
+        {/* Verification — Donut with center label */}
+        <Card>
+          <CardHeader className="pb-2">
             <CardTitle className="text-base">User Verification</CardTitle>
+            <CardDescription>Verified vs unverified accounts</CardDescription>
           </CardHeader>
-          <CardContent className="pb-4">
-            <div style={{ width: "100%", height: 180 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={verificationDistribution}
-                    cx="40%"
-                    cy="50%"
-                    innerRadius={45}
-                    outerRadius={75}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {verificationDistribution.map((_entry, index) => (
-                      <Cell
-                        key={`verify-${index}`}
-                        fill={["#00C49F", "#FF8042"][index % 2]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "var(--radius)",
+          <CardContent>
+            <ChartContainer
+              config={verifyConfig}
+              className="mx-auto aspect-square max-h-[220px]"
+            >
+              <PieChart>
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent hideLabel />}
+                />
+                <Pie
+                  data={verificationDistribution}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={55}
+                  outerRadius={85}
+                  strokeWidth={5}
+                >
+                  <Label
+                    content={({ viewBox }) => {
+                      if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                        return (
+                          <text
+                            x={viewBox.cx}
+                            y={viewBox.cy}
+                            textAnchor="middle"
+                            dominantBaseline="middle"
+                          >
+                            <tspan
+                              x={viewBox.cx}
+                              y={viewBox.cy}
+                              className="fill-foreground text-3xl font-bold"
+                            >
+                              {totalUsers.toLocaleString()}
+                            </tspan>
+                            <tspan
+                              x={viewBox.cx}
+                              y={(viewBox.cy || 0) + 24}
+                              className="fill-muted-foreground text-sm"
+                            >
+                              Total Users
+                            </tspan>
+                          </text>
+                        );
+                      }
                     }}
-                    itemStyle={{ color: "hsl(var(--foreground))" }}
                   />
-                  <Legend
-                    layout="vertical"
-                    align="right"
-                    verticalAlign="middle"
-                    iconSize={8}
-                    wrapperStyle={{ fontSize: 12 }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+                </Pie>
+                <ChartLegend
+                  content={<ChartLegendContent nameKey="name" />}
+                  className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
+                />
+              </PieChart>
+            </ChartContainer>
           </CardContent>
         </Card>
       </div>
