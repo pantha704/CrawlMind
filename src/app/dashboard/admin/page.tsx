@@ -66,7 +66,7 @@ export default function AdminDashboardPage() {
     );
   }
 
-  const { overview, planDistribution, dailyUsage, topUsers } = data;
+  const { overview, planDistribution, verificationDistribution, dailyUsage, topUsers } = data;
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-32">
@@ -124,9 +124,9 @@ export default function AdminDashboardPage() {
             </Card>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             
-            <Card className="col-span-4">
+            <Card className="col-span-1 lg:col-span-2">
               <CardHeader>
                 <CardTitle>Usage Over Last 30 Days</CardTitle>
               </CardHeader>
@@ -165,32 +165,61 @@ export default function AdminDashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className="col-span-3">
-              <CardHeader>
-                <CardTitle>Plan Distribution</CardTitle>
-              </CardHeader>
-              <CardContent className="h-[300px] flex items-center justify-center">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={planDistribution}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {planDistribution.map((entry: any, index: number) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip contentStyle={{ backgroundColor: '#111', border: '1px solid #333' }} />
-                    <Legend verticalAlign="bottom" height={36}/>
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+            <div className="flex flex-col gap-4 col-span-1">
+              <Card className="flex-1">
+                <CardHeader className="pb-2">
+                  <CardTitle>Plan Distribution</CardTitle>
+                </CardHeader>
+                <CardContent className="h-[200px] flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={planDistribution}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={65}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {planDistribution.map((entry: any, index: number) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip contentStyle={{ backgroundColor: '#111', border: '1px solid #333' }} />
+                      <Legend verticalAlign="bottom" height={24} iconSize={10}/>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card className="flex-1">
+                <CardHeader className="pb-2">
+                  <CardTitle>User Verification</CardTitle>
+                </CardHeader>
+                <CardContent className="h-[200px] flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={verificationDistribution}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={65}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {verificationDistribution.map((entry: any, index: number) => (
+                          <Cell key={`cell-${index}`} fill={['#00C49F', '#FF8042'][index % 2]} />
+                        ))}
+                      </Pie>
+                      <Tooltip contentStyle={{ backgroundColor: '#111', border: '1px solid #333' }} />
+                      <Legend verticalAlign="bottom" height={24} iconSize={10}/>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
 
           </div>
 

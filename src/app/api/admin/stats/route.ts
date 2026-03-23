@@ -51,6 +51,11 @@ export async function GET() {
       totalImportedJobs,
     };
 
+    const verificationDistribution = [
+      { name: "Verified", value: verifiedUsers },
+      { name: "Unverified", value: unverifiedUsers },
+    ];
+
     // 2. Plan Distribution
     const planGroups = await prisma.user.groupBy({
       by: ["plan"],
@@ -147,6 +152,7 @@ export async function GET() {
       overview,
       planDistribution,
       statusDistribution,
+      verificationDistribution,
       dailyUsage,
       topUsers,
       recentCrawls: recentGlobalCrawls.map(c => ({
