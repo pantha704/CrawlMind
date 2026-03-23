@@ -151,7 +151,7 @@ export default function AdminCharts({
         <CardContent>
           <ChartContainer
             config={usageConfig}
-            className="min-h-[300px] w-full"
+            className="aspect-auto h-[300px] w-full"
           >
             <AreaChart
               accessibilityLayer
@@ -222,7 +222,7 @@ export default function AdminCharts({
           <CardContent className="flex-1 pb-2">
             <ChartContainer
               config={planConfig}
-              className="mx-auto aspect-video max-h-[300px] w-full"
+              className="aspect-auto h-[250px] w-full"
             >
               <BarChart accessibilityLayer data={formattedPlanData} margin={{ top: 20 }}>
                 <CartesianGrid vertical={false} strokeDasharray="3 3" />
@@ -257,7 +257,7 @@ export default function AdminCharts({
           <CardContent className="flex-1 pb-2">
             <ChartContainer
               config={verifyConfig}
-              className="mx-auto aspect-square max-h-[300px] w-full pb-0"
+              className="mx-auto aspect-square max-h-[250px] pb-0"
             >
               <PieChart>
                 <ChartTooltip
