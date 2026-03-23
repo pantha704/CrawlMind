@@ -16,7 +16,7 @@ export function SettingsManageSubscription({ plan }: { plan: string }) {
     }
 
     // Cancel subscription
-    if (!confirm("Are you sure you want to cancel your subscription? You'll be downgraded to the Spark (free) plan.")) {
+    if (!confirm("Are you sure you want to cancel your subscription? You will retain Pro access until the end of your current billing cycle, after which you'll be downgraded to the Spark (free) plan.")) {
       return;
     }
 

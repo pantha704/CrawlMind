@@ -26,16 +26,13 @@ export async function POST() {
       );
     }
 
-    await razorpay.subscriptions.cancel(user.razorpaySubscriptionId);
+    // 1 means cancel_at_cycle_end = true in Razorpay's Node SDK signature
+    await razorpay.subscriptions.cancel(user.razorpaySubscriptionId, true);
 
-    // Revert to free plan
-    await prisma.user.update({
-      where: { id: session.user.id },
-      data: {
-        plan: "SPARK",
-        razorpaySubscriptionId: null,
-      },
-    });
+    // We intentionally DO NOT revert to the SPARK plan here.
+    // The user has already paid for the current billing cycle.
+    // The Razorpay webhook will fire "subscription.cancelled" or "subscription.halted"
+    // at the end of the billing cycle to formally downgrade the user.
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

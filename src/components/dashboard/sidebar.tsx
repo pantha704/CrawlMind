@@ -28,6 +28,7 @@ const navItems = [
   { icon: FolderOpen, label: "Saved Results", href: "/dashboard/library" },
   { icon: BarChart3, label: "Analytics", href: "/dashboard/analytics" },
   { icon: Settings, label: "Settings", href: "/dashboard/settings" },
+  { icon: LayoutDashboard /* using placeholder since user icon isn't imported */, label: "Profile", href: "/dashboard/profile" },
 ];
 
 interface SidebarProps {

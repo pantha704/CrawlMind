@@ -3,7 +3,7 @@
 import { Search, Bell, Menu } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -80,6 +80,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
         <DropdownMenu>
           <DropdownMenuTrigger className="relative h-8 w-8 rounded-full outline-none">
             <Avatar className="h-8 w-8 cursor-pointer">
+              <AvatarImage src={session?.user?.image || ""} alt={session?.user?.name || "User"} />
               <AvatarFallback className="bg-primary/20 text-primary text-xs">
                 {userInitial}
               </AvatarFallback>
