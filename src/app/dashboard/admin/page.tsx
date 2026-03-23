@@ -14,15 +14,15 @@ import { formatDistanceToNow } from "date-fns";
 const AdminCharts = dynamic(() => import("./admin-charts"), {
   ssr: false,
   loading: () => (
-    <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
-      <div className="lg:col-span-4 rounded-lg border bg-card p-6 h-[370px] flex items-center justify-center">
+    <div className="flex flex-col gap-6">
+      <div className="rounded-lg border bg-card p-6 h-[400px] flex items-center justify-center">
         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
       </div>
-      <div className="grid gap-4 lg:col-span-3 grid-cols-1">
-        <div className="rounded-lg border bg-card p-6 h-[260px] flex items-center justify-center">
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="rounded-lg border bg-card p-6 h-[400px] flex items-center justify-center">
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         </div>
-        <div className="rounded-lg border bg-card p-6 h-[260px] flex items-center justify-center">
+        <div className="rounded-lg border bg-card p-6 h-[400px] flex items-center justify-center">
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         </div>
       </div>
