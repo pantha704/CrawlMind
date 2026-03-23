@@ -117,6 +117,28 @@ export default function AdminCharts({
 
   const totalUsers = formattedVerificationData.reduce((s, e) => s + e.value, 0);
 
+  // Safety: Ensure dates don't crash
+  const formatDate = (val: string) => {
+    try {
+      const d = new Date(val);
+      if (isNaN(d.getTime())) return val;
+      return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    } catch {
+      return val;
+    }
+  };
+
+  const formatTooltipDate = (val: unknown) => {
+    try {
+      const dateStr = String(val);
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
+    } catch {
+      return String(val);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6">
       
@@ -129,23 +151,13 @@ export default function AdminCharts({
         <CardContent>
           <ChartContainer
             config={usageConfig}
-            className="aspect-auto h-[320px] w-full"
+            className="min-h-[300px] w-full"
           >
             <AreaChart
               accessibilityLayer
               data={dailyUsage}
-              margin={{ top: 10, right: 10, bottom: 0, left: -20 }}
+              margin={{ top: 10, right: 10, bottom: 0, left: 0 }}
             >
-              <defs>
-                <linearGradient id="fillCrawls" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--color-crawls)" stopOpacity={0.8} />
-                  <stop offset="95%" stopColor="var(--color-crawls)" stopOpacity={0.1} />
-                </linearGradient>
-                <linearGradient id="fillPages" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--color-pages)" stopOpacity={0.8} />
-                  <stop offset="95%" stopColor="var(--color-pages)" stopOpacity={0.1} />
-                </linearGradient>
-              </defs>
               <CartesianGrid vertical={false} strokeDasharray="3 3" />
               <XAxis
                 dataKey="date"
@@ -153,12 +165,7 @@ export default function AdminCharts({
                 axisLine={false}
                 tickMargin={12}
                 minTickGap={32}
-                tickFormatter={(val) =>
-                  new Date(val).toLocaleDateString(undefined, {
-                    month: "short",
-                    day: "numeric",
-                  })
-                }
+                tickFormatter={formatDate}
                 className="text-xs text-muted-foreground font-medium"
               />
               <YAxis
@@ -172,13 +179,7 @@ export default function AdminCharts({
                 cursor={{ stroke: "var(--border)", strokeWidth: 1, strokeDasharray: "4 4" }}
                 content={
                   <ChartTooltipContent
-                    labelFormatter={(val) =>
-                      new Date(val).toLocaleDateString(undefined, {
-                        month: "long",
-                        day: "numeric",
-                        year: "numeric",
-                      })
-                    }
+                    labelFormatter={formatTooltipDate}
                     indicator="dot"
                   />
                 }
@@ -186,7 +187,8 @@ export default function AdminCharts({
               <Area
                 dataKey="pages"
                 type="monotone"
-                fill="url(#fillPages)"
+                fill="var(--color-pages)"
+                fillOpacity={0.2}
                 stroke="var(--color-pages)"
                 strokeWidth={2}
                 stackId="a"
@@ -195,7 +197,8 @@ export default function AdminCharts({
               <Area
                 dataKey="crawls"
                 type="monotone"
-                fill="url(#fillCrawls)"
+                fill="var(--color-crawls)"
+                fillOpacity={0.2}
                 stroke="var(--color-crawls)"
                 strokeWidth={2}
                 stackId="b"
@@ -219,7 +222,7 @@ export default function AdminCharts({
           <CardContent className="flex-1 pb-2">
             <ChartContainer
               config={planConfig}
-              className="mx-auto aspect-square max-h-[300px] w-full"
+              className="mx-auto aspect-video max-h-[300px] w-full"
             >
               <BarChart accessibilityLayer data={formattedPlanData} margin={{ top: 20 }}>
                 <CartesianGrid vertical={false} strokeDasharray="3 3" />
@@ -235,7 +238,7 @@ export default function AdminCharts({
                   cursor={false}
                   content={<ChartTooltipContent hideLabel />}
                 />
-                <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={48}>
+                <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={40}>
                   {formattedPlanData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.fill} />
                   ))}
@@ -249,12 +252,12 @@ export default function AdminCharts({
         <Card className="flex flex-col">
           <CardHeader className="pb-4">
             <CardTitle className="text-xl">Verification Status</CardTitle>
-            <CardDescription>Verified versus unverified user accounts</CardDescription>
+            <CardDescription>Verified versus unverified accounts</CardDescription>
           </CardHeader>
           <CardContent className="flex-1 pb-2">
             <ChartContainer
               config={verifyConfig}
-              className="mx-auto aspect-square max-h-[300px] w-full"
+              className="mx-auto aspect-square max-h-[300px] w-full pb-0"
             >
               <PieChart>
                 <ChartTooltip
@@ -265,11 +268,10 @@ export default function AdminCharts({
                   data={formattedVerificationData}
                   dataKey="value"
                   nameKey="name"
-                  innerRadius={75}
-                  outerRadius={110}
-                  stroke="var(--background)"
-                  strokeWidth={3}
-                  paddingAngle={2}
+                  innerRadius={70}
+                  outerRadius={100}
+                  strokeWidth={4}
+                  paddingAngle={3}
                 >
                   <Label
                     content={({ viewBox }) => {
@@ -284,13 +286,13 @@ export default function AdminCharts({
                             <tspan
                               x={viewBox.cx}
                               y={viewBox.cy}
-                              className="fill-foreground text-4xl font-bold tracking-tight"
+                              className="fill-foreground text-3xl font-bold tracking-tight"
                             >
                               {totalUsers.toLocaleString()}
                             </tspan>
                             <tspan
                               x={viewBox.cx}
-                              y={(viewBox.cy || 0) + 28}
+                              y={(viewBox.cy || 0) + 24}
                               className="fill-muted-foreground text-sm font-medium"
                             >
                               Total Users
@@ -306,7 +308,7 @@ export default function AdminCharts({
                 </Pie>
                 <ChartLegend
                   content={<ChartLegendContent nameKey="name" />}
-                  className="-translate-y-4 flex-wrap gap-4 [&>*]:justify-center"
+                  className="-translate-y-2 flex-wrap gap-4 [&>*]:justify-center"
                 />
               </PieChart>
             </ChartContainer>
