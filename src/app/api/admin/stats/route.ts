@@ -20,9 +20,10 @@ export async function GET() {
     }
 
     // 1. Overview Aggregates
-    const [totalUsers, totalCrawls] = await Promise.all([
+    const [totalUsers, totalCrawls, verifiedUsers] = await Promise.all([
       prisma.user.count(),
       prisma.crawlJob.count(),
+      prisma.user.count({ where: { emailVerified: true } })
     ]);
 
     // Subscribed vs Free users
@@ -30,6 +31,7 @@ export async function GET() {
       where: { plan: { not: "SPARK" } },
     });
     const freeUsers = totalUsers - subscribedUsers;
+    const unverifiedUsers = totalUsers - verifiedUsers;
 
     // Total pages + Imported jobs
     const allJobs = await prisma.crawlJob.findMany({
@@ -42,6 +44,8 @@ export async function GET() {
       totalUsers,
       subscribedUsers,
       freeUsers,
+      verifiedUsers,
+      unverifiedUsers,
       totalCrawls,
       totalPagesFetched,
       totalImportedJobs,

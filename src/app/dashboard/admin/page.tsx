@@ -83,9 +83,10 @@ export default function AdminDashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{overview.totalUsers}</div>
-                <p className="text-xs text-muted-foreground">
-                  {overview.subscribedUsers} Subscribed, {overview.freeUsers} Free
-                </p>
+                <div className="text-xs text-muted-foreground mt-1 flex flex-col gap-1">
+                  <span>{overview.subscribedUsers} Subscribed, {overview.freeUsers} Free</span>
+                  <span className="text-primary/90">{overview.verifiedUsers} Verified, {overview.unverifiedUsers} Unverified</span>
+                </div>
               </CardContent>
             </Card>
 

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 import { useSession } from "@/lib/auth-client";
 
 interface UserProfile {
@@ -28,7 +28,21 @@ export default function ProfilePage() {
   const [name, setName] = useState("");
   const [image, setImage] = useState("");
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image must be less than 2MB");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImage(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -111,16 +125,46 @@ export default function ProfilePage() {
                         </Avatar>
                         
                         <div className="space-y-3 flex-1 w-full">
-                          <Label htmlFor="image">Profile Image URL</Label>
-                          <div className="flex gap-2">
+                          <Label>Profile Image</Label>
+                          <div className="flex gap-4 items-center">
+                            <div className="relative">
+                              <Input
+                                type="file"
+                                id="image-upload"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={handleImageUpload}
+                              />
+                              <Label
+                                htmlFor="image-upload"
+                                className="cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 bg-primary/10 text-primary border-primary/20"
+                              >
+                                <Upload className="w-4 h-4 mr-2" />
+                                Upload Photo
+                              </Label>
+                            </div>
+                            <span className="text-xs text-muted-foreground">or URL below</span>
+                          </div>
+                          <div className="relative">
                             <Input
                               id="image"
-                              value={image}
+                              value={image.startsWith('data:image') ? '' : image}
                               onChange={(e) => setImage(e.target.value)}
-                              placeholder="https://example.com/avatar.jpg"
+                              placeholder={image.startsWith('data:image') ? 'Custom image uploaded' : "https://example.com/avatar.jpg"}
                               className="bg-background/50"
+                              disabled={image.startsWith('data:image')}
                             />
-                            {/* In a real app we'd upload to S3. Here we just take a URL. */}
+                            {image.startsWith('data:image') && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setImage("")}
+                                className="text-xs text-red-500 hover:text-red-400 absolute right-1 top-1 h-7 px-2"
+                              >
+                                Remove Upload
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </div>
