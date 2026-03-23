@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
-import { Sidebar } from "@/components/dashboard/sidebar";
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Loader2, ArrowLeft, Eye, FileText, Download } from "lucide-react";
 import Link from 'next/link';
@@ -17,7 +17,7 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+
 
   useEffect(() => {
     fetchUserStats();
@@ -40,7 +40,7 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
 
   if (loading) {
     return (
-      <div className="flex h-screen bg-background items-center justify-center">
+      <div className="flex h-[50vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -48,15 +48,12 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
 
   if (error) {
     return (
-      <div className="flex h-screen bg-background">
-        <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className="flex-1 p-8 flex flex-col items-center justify-center">
-          <h2 className="text-2xl font-bold text-red-500 mb-4">Error</h2>
-          <p className="text-muted-foreground">{error}</p>
-          <Link href="/dashboard/admin" className={buttonVariants({ className: "mt-4" })}>
-            Back to Admin
-          </Link>
-        </div>
+      <div className="flex h-[50vh] flex-col items-center justify-center">
+        <h2 className="text-2xl font-bold text-red-500 mb-4">Error</h2>
+        <p className="text-muted-foreground">{error}</p>
+        <Link href="/dashboard/admin" className={buttonVariants({ className: "mt-4" })}>
+          Back to Admin
+        </Link>
       </div>
     );
   }
@@ -64,12 +61,7 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
   const { user, stats, crawlJobs } = data;
 
   return (
-    <div className="flex h-screen bg-background text-foreground overflow-hidden">
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      <main className="flex-1 overflow-y-auto">
-        <div className="p-8 max-w-7xl mx-auto space-y-8 pb-32">
-          
+    <div className="max-w-7xl mx-auto space-y-8 pb-32">
           <div className="flex items-center gap-4">
             <Link href="/dashboard/admin" className={buttonVariants({ variant: "outline", size: "icon" })}>
               <ArrowLeft className="h-4 w-4" />
@@ -187,8 +179,6 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
             </CardContent>
           </Card>
 
-        </div>
-      </main>
     </div>
   );
 }

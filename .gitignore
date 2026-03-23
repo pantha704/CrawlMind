@@ -41,4 +41,8 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
-\n# Admin\nsrc/app/dashboard/admin/\nsrc/app/api/admin/\nadmin-analytics.md
+
+# Admin
+src/app/dashboard/admin/
+src/app/api/admin/
+admin-analytics.md

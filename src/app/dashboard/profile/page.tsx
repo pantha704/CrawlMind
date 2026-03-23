@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { Topbar } from "@/components/dashboard/topbar";
-import { Sidebar } from "@/components/dashboard/sidebar";
+import { useEffect, useState } from "react";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +26,7 @@ export default function ProfilePage() {
   const [name, setName] = useState("");
   const [image, setImage] = useState("");
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+
 
   useEffect(() => {
     fetchProfile();
@@ -73,17 +72,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="flex h-screen bg-background text-foreground">
-      <Sidebar 
-        open={sidebarOpen} 
-        onClose={() => setSidebarOpen(false)} 
-      />
-
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-        <Topbar onMenuClick={() => setSidebarOpen(true)} />
-
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 custom-scrollbar">
-          <div className="max-w-3xl mx-auto space-y-8">
+    <div className="max-w-3xl mx-auto space-y-8 pb-32">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Your Profile</h1>
               <p className="text-muted-foreground mt-2">
@@ -186,9 +175,6 @@ export default function ProfilePage() {
                 </Card>
               </div>
             ) : null}
-          </div>
-        </main>
-      </div>
     </div>
   );
 }

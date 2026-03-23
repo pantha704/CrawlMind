@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Sidebar } from "@/components/dashboard/sidebar";
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Loader2, Users, Download, Eye, FileText, ArrowUpRight } from "lucide-react";
 import {
@@ -28,7 +28,7 @@ export default function AdminDashboardPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+
 
   useEffect(() => {
     fetchStats();
@@ -51,7 +51,7 @@ export default function AdminDashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen bg-background items-center justify-center">
+      <div className="flex h-[50vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -59,12 +59,9 @@ export default function AdminDashboardPage() {
 
   if (error) {
     return (
-      <div className="flex h-screen bg-background">
-        <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className="flex-1 p-8 flex flex-col items-center justify-center">
-          <h2 className="text-2xl font-bold text-red-500 mb-4">Access Denied</h2>
-          <p className="text-muted-foreground">{error}</p>
-        </div>
+      <div className="flex h-[50vh] flex-col items-center justify-center">
+        <h2 className="text-2xl font-bold text-red-500 mb-4">Access Denied</h2>
+        <p className="text-muted-foreground">{error}</p>
       </div>
     );
   }
@@ -72,12 +69,7 @@ export default function AdminDashboardPage() {
   const { overview, planDistribution, dailyUsage, topUsers } = data;
 
   return (
-    <div className="flex h-screen bg-background text-foreground overflow-hidden">
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      <main className="flex-1 overflow-y-auto">
-        <div className="p-8 max-w-7xl mx-auto space-y-8 pb-32">
-          
+    <div className="max-w-7xl mx-auto space-y-8 pb-32">
           <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h1>
             <p className="text-muted-foreground">Admin-only overview of total platform usage and metrics.</p>
@@ -253,8 +245,6 @@ export default function AdminDashboardPage() {
             </CardContent>
           </Card>
 
-        </div>
-      </main>
     </div>
   );
 }
