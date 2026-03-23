@@ -103,7 +103,7 @@ export default function AdminDashboardPage() {
   const { overview, planDistribution, verificationDistribution, dailyUsage, topUsers } = data;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 pb-32">
+    <div className="w-full space-y-6 pb-16">
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h1>
         <p className="text-muted-foreground">Admin-only overview of total platform usage and metrics.</p>
