@@ -45,9 +45,9 @@ export default function AdminCharts({
   verificationDistribution,
 }: AdminChartsProps) {
   return (
-    <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
-      {/* Line Chart — spans 2 cols on large screens */}
-      <Card className="lg:col-span-2">
+    <div className="grid gap-4 grid-cols-1 lg:grid-cols-4">
+      {/* Line Chart — spans 3 cols on large screens to align with top stats */}
+      <Card className="lg:col-span-3">
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Usage Over Last 30 Days</CardTitle>
         </CardHeader>
@@ -146,10 +146,10 @@ export default function AdminCharts({
                 <PieChart>
                   <Pie
                     data={planDistribution}
-                    cx="50%"
+                    cx="40%"
                     cy="50%"
-                    innerRadius={35}
-                    outerRadius={60}
+                    innerRadius={45}
+                    outerRadius={75}
                     paddingAngle={5}
                     dataKey="value"
                   >
@@ -168,10 +168,11 @@ export default function AdminCharts({
                     }}
                   />
                   <Legend
-                    verticalAlign="bottom"
-                    height={20}
+                    layout="vertical"
+                    align="right"
+                    verticalAlign="middle"
                     iconSize={8}
-                    wrapperStyle={{ fontSize: 11 }}
+                    wrapperStyle={{ fontSize: 12 }}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -189,10 +190,10 @@ export default function AdminCharts({
                 <PieChart>
                   <Pie
                     data={verificationDistribution}
-                    cx="50%"
+                    cx="40%"
                     cy="50%"
-                    innerRadius={35}
-                    outerRadius={60}
+                    innerRadius={45}
+                    outerRadius={75}
                     paddingAngle={5}
                     dataKey="value"
                   >
@@ -211,10 +212,11 @@ export default function AdminCharts({
                     }}
                   />
                   <Legend
-                    verticalAlign="bottom"
-                    height={20}
+                    layout="vertical"
+                    align="right"
+                    verticalAlign="middle"
                     iconSize={8}
-                    wrapperStyle={{ fontSize: 11 }}
+                    wrapperStyle={{ fontSize: 12 }}
                   />
                 </PieChart>
               </ResponsiveContainer>
