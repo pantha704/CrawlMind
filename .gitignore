@@ -43,6 +43,5 @@ next-env.d.ts
 /src/generated/prisma
 
 # Admin
-src/app/dashboard/admin/
-src/app/api/admin/
 admin-analytics.md
+test_chart.ts

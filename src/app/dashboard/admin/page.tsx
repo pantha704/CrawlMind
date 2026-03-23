@@ -14,18 +14,8 @@ import { formatDistanceToNow } from "date-fns";
 const AdminCharts = dynamic(() => import("./admin-charts"), {
   ssr: false,
   loading: () => (
-    <div className="flex flex-col gap-6">
-      <div className="rounded-lg border bg-card p-6 h-[400px] flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
-      <div className="grid gap-6 md:grid-cols-2">
-        <div className="rounded-lg border bg-card p-6 h-[400px] flex items-center justify-center">
-          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-        </div>
-        <div className="rounded-lg border bg-card p-6 h-[400px] flex items-center justify-center">
-          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-        </div>
-      </div>
+    <div className="rounded-lg border bg-card p-6 h-[420px] flex items-center justify-center">
+      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
     </div>
   ),
 });
@@ -100,7 +90,7 @@ export default function AdminDashboardPage() {
 
   if (!data) return null;
 
-  const { overview, planDistribution, verificationDistribution, dailyUsage, topUsers } = data;
+  const { overview, dailyUsage, topUsers } = data;
 
   return (
     <div className="w-full space-y-6 pb-16">
@@ -160,11 +150,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Charts — dynamically loaded, no SSR */}
-      <AdminCharts
-        dailyUsage={dailyUsage}
-        planDistribution={planDistribution}
-        verificationDistribution={verificationDistribution}
-      />
+      <AdminCharts dailyUsage={dailyUsage} />
 
       {/* Top Users Table */}
       <Card>
