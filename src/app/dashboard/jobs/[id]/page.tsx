@@ -226,13 +226,12 @@ export default function JobDetailPage() {
   };
 
   const handleDownload = () => {
-    const ext = job.format === "markdown" ? "md" : job.format === "html" ? "html" : "json";
     const exportStr = getFullExportString();
-    const blob = new Blob([exportStr || ""], { type: "text/plain" });
+    const blob = new Blob([exportStr || ""], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `crawl-${job.id}.${ext}`;
+    a.download = `crawl-${job.id}.json`;
     a.click();
     URL.revokeObjectURL(url);
     toast.success("Download started");
