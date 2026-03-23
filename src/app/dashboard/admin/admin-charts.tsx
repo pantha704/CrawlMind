@@ -166,6 +166,7 @@ export default function AdminCharts({
                       border: "1px solid hsl(var(--border))",
                       borderRadius: "var(--radius)",
                     }}
+                    itemStyle={{ color: "hsl(var(--foreground))" }}
                   />
                   <Legend
                     layout="vertical"
@@ -210,6 +211,7 @@ export default function AdminCharts({
                       border: "1px solid hsl(var(--border))",
                       borderRadius: "var(--radius)",
                     }}
+                    itemStyle={{ color: "hsl(var(--foreground))" }}
                   />
                   <Legend
                     layout="vertical"
