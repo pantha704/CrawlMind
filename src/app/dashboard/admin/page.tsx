@@ -28,7 +28,11 @@ export default function AdminDashboardPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     fetchStats();
@@ -131,6 +135,7 @@ export default function AdminDashboardPage() {
                 <CardTitle>Usage Over Last 30 Days</CardTitle>
               </CardHeader>
               <CardContent className="h-[300px]">
+                {mounted ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={dailyUsage} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" />
@@ -162,6 +167,7 @@ export default function AdminDashboardPage() {
                     <Line yAxisId="right" type="monotone" dataKey="pages" stroke="#0088FE" name="Pages Fetched" strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
+                ) : <div className="flex items-center justify-center h-full"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>}
               </CardContent>
             </Card>
 
@@ -171,6 +177,7 @@ export default function AdminDashboardPage() {
                   <CardTitle>Plan Distribution</CardTitle>
                 </CardHeader>
                 <CardContent className="h-[200px] flex items-center justify-center">
+                  {mounted ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -190,6 +197,7 @@ export default function AdminDashboardPage() {
                       <Legend verticalAlign="bottom" height={24} iconSize={10}/>
                     </PieChart>
                   </ResponsiveContainer>
+                  ) : <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />}
                 </CardContent>
               </Card>
 
@@ -198,6 +206,7 @@ export default function AdminDashboardPage() {
                   <CardTitle>User Verification</CardTitle>
                 </CardHeader>
                 <CardContent className="h-[200px] flex items-center justify-center">
+                  {mounted ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -217,6 +226,7 @@ export default function AdminDashboardPage() {
                       <Legend verticalAlign="bottom" height={24} iconSize={10}/>
                     </PieChart>
                   </ResponsiveContainer>
+                  ) : <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />}
                 </CardContent>
               </Card>
             </div>
