@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Loader2, Users, Download, Eye, FileText, ArrowUpRight } from "lucide-react";
@@ -11,7 +11,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
   PieChart,
   Pie,
   Cell,
@@ -24,11 +23,43 @@ import { formatDistanceToNow } from "date-fns";
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
+function useContainerSize(ref: React.RefObject<HTMLDivElement | null>) {
+  const [size, setSize] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) {
+        setSize({
+          width: Math.floor(entry.contentRect.width),
+          height: Math.floor(entry.contentRect.height),
+        });
+      }
+    });
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [ref]);
+
+  return size;
+}
+
 export default function AdminDashboardPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+
+  const lineChartRef = useRef<HTMLDivElement>(null);
+  const planPieRef = useRef<HTMLDivElement>(null);
+  const verifyPieRef = useRef<HTMLDivElement>(null);
+
+  const lineSize = useContainerSize(lineChartRef);
+  const planSize = useContainerSize(planPieRef);
+  const verifySize = useContainerSize(verifyPieRef);
 
   useEffect(() => {
     setMounted(true);
@@ -134,40 +165,42 @@ export default function AdminDashboardPage() {
               <CardHeader>
                 <CardTitle>Usage Over Last 30 Days</CardTitle>
               </CardHeader>
-              <CardContent className="h-[300px]">
-                {mounted ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={dailyUsage} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" />
-                    <XAxis 
-                      dataKey="date" 
-                      tickFormatter={(val) => new Date(val).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                      stroke="#888888"
-                      fontSize={12}
-                    />
-                    <YAxis 
-                      yAxisId="left" 
-                      stroke="#888888" 
-                      fontSize={12} 
-                      tickFormatter={(value) => `${value}`}
-                    />
-                    <YAxis 
-                      yAxisId="right" 
-                      orientation="right" 
-                      stroke="#888888" 
-                      fontSize={12} 
-                      tickFormatter={(value) => `${value}`}
-                    />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#111', border: '1px solid #333' }}
-                      itemStyle={{ color: '#fff' }}
-                    />
-                    <Legend />
-                    <Line yAxisId="left" type="monotone" dataKey="crawls" stroke="#00C49F" name="New Crawls" strokeWidth={2} dot={false} />
-                    <Line yAxisId="right" type="monotone" dataKey="pages" stroke="#0088FE" name="Pages Fetched" strokeWidth={2} dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-                ) : <div className="flex items-center justify-center h-full"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>}
+              <CardContent>
+                <div ref={lineChartRef} style={{ width: '100%', height: 280, minWidth: 0 }}>
+                  {mounted && lineSize.width > 0 ? (
+                    <LineChart width={lineSize.width} height={280} data={dailyUsage} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" />
+                      <XAxis 
+                        dataKey="date" 
+                        tickFormatter={(val) => new Date(val).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        stroke="#888888"
+                        fontSize={12}
+                      />
+                      <YAxis 
+                        yAxisId="left" 
+                        stroke="#888888" 
+                        fontSize={12} 
+                        tickFormatter={(value) => `${value}`}
+                      />
+                      <YAxis 
+                        yAxisId="right" 
+                        orientation="right" 
+                        stroke="#888888" 
+                        fontSize={12} 
+                        tickFormatter={(value) => `${value}`}
+                      />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#111', border: '1px solid #333' }}
+                        itemStyle={{ color: '#fff' }}
+                      />
+                      <Legend />
+                      <Line yAxisId="left" type="monotone" dataKey="crawls" stroke="#00C49F" name="New Crawls" strokeWidth={2} dot={false} />
+                      <Line yAxisId="right" type="monotone" dataKey="pages" stroke="#0088FE" name="Pages Fetched" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  ) : (
+                    <div className="flex items-center justify-center h-full"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
@@ -176,28 +209,30 @@ export default function AdminDashboardPage() {
                 <CardHeader className="pb-2">
                   <CardTitle>Plan Distribution</CardTitle>
                 </CardHeader>
-                <CardContent className="h-[200px] flex items-center justify-center">
-                  {mounted ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={planDistribution}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={40}
-                        outerRadius={65}
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        {planDistribution.map((entry: any, index: number) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip contentStyle={{ backgroundColor: '#111', border: '1px solid #333' }} />
-                      <Legend verticalAlign="bottom" height={24} iconSize={10}/>
-                    </PieChart>
-                  </ResponsiveContainer>
-                  ) : <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />}
+                <CardContent>
+                  <div ref={planPieRef} style={{ width: '100%', height: 200, minWidth: 0 }}>
+                    {mounted && planSize.width > 0 ? (
+                      <PieChart width={planSize.width} height={200}>
+                        <Pie
+                          data={planDistribution}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={40}
+                          outerRadius={65}
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {planDistribution.map((_entry: { name: string; value: number }, index: number) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip contentStyle={{ backgroundColor: '#111', border: '1px solid #333' }} />
+                        <Legend verticalAlign="bottom" height={24} iconSize={10}/>
+                      </PieChart>
+                    ) : (
+                      <div className="flex items-center justify-center h-full"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
 
@@ -205,28 +240,30 @@ export default function AdminDashboardPage() {
                 <CardHeader className="pb-2">
                   <CardTitle>User Verification</CardTitle>
                 </CardHeader>
-                <CardContent className="h-[200px] flex items-center justify-center">
-                  {mounted ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={verificationDistribution}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={40}
-                        outerRadius={65}
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        {verificationDistribution.map((entry: any, index: number) => (
-                          <Cell key={`cell-${index}`} fill={['#00C49F', '#FF8042'][index % 2]} />
-                        ))}
-                      </Pie>
-                      <Tooltip contentStyle={{ backgroundColor: '#111', border: '1px solid #333' }} />
-                      <Legend verticalAlign="bottom" height={24} iconSize={10}/>
-                    </PieChart>
-                  </ResponsiveContainer>
-                  ) : <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />}
+                <CardContent>
+                  <div ref={verifyPieRef} style={{ width: '100%', height: 200, minWidth: 0 }}>
+                    {mounted && verifySize.width > 0 ? (
+                      <PieChart width={verifySize.width} height={200}>
+                        <Pie
+                          data={verificationDistribution}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={40}
+                          outerRadius={65}
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {verificationDistribution.map((_entry: { name: string; value: number }, index: number) => (
+                            <Cell key={`cell-${index}`} fill={['#00C49F', '#FF8042'][index % 2]} />
+                          ))}
+                        </Pie>
+                        <Tooltip contentStyle={{ backgroundColor: '#111', border: '1px solid #333' }} />
+                        <Legend verticalAlign="bottom" height={24} iconSize={10}/>
+                      </PieChart>
+                    ) : (
+                      <div className="flex items-center justify-center h-full"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </div>
