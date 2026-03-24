@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
     const crawlOpts: CrawlConfig = {
       url: urls[0],
       source: body.source || "all",
-      limit: limit || 100,
+      maxURLs: limit || 100,
       depth: depth || 2,
       formats: [format || "markdown"],
       render: render || false,
