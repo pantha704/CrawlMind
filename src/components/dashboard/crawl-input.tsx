@@ -329,12 +329,12 @@ export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
                   />
                 </div>
 
-                {/* Page limit */}
+                {/* URL limit */}
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground flex items-center">
-                    Max Pages
+                    Max URLs
                     <span className="text-primary ml-1">(max {maxPages.toLocaleString()})</span>
-                    <InfoTip text="Maximum number of pages to crawl. The crawler stops after reaching this limit, even if there are more links to follow." />
+                    <InfoTip text="Maximum number of URLs to crawl. The crawler stops after reaching this limit, even if there are more links to follow." />
                   </Label>
                   <Input
                     type="number"
