@@ -42,6 +42,34 @@ next-env.d.ts
 
 /src/generated/prisma
 
-# Admin
+# Admin & internal scripts
 admin-analytics.md
-test_chart.ts
+list_users_internal.ts
+upgrade_user_internal.ts
+
+# Test/debug scripts
+test-ai*.ts
+test_ai*
+test-invoice*
+test_chart*
+smoke_test*
+
+# Log files
+*.log
+showcase_log.txt
+
+# CF result dumps
+cf_result_*.json
+crawl_results_*.json
+
+# Debug/showcase scripts in src
+src/analyze_ui_crawl.ts
+src/check_status.ts
+src/comprehensive_crawl.ts
+src/final_crawl_showcase.ts
+src/find_success_jobs.ts
+src/showcase_crawl.ts
+src/smoke_test.ts
+
+# Lock files (using bun.lock)
+package-lock.json
