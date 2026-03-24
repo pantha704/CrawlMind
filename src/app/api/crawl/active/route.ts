@@ -68,13 +68,26 @@ export async function GET() {
             // Fetch all results inline
             const results = await getAllCrawlResults(job.cfJobId, job.cfAccountId);
 
-            if (results.success && results.records.length > 0) {
+            // Deduplicate by URL
+            const seen = new Set<string>();
+            const uniqueRecords = results.records.filter((r: unknown) => {
+              const url = (r as Record<string, unknown>).url as string;
+              if (!url || seen.has(url)) return false;
+              seen.add(url);
+              return true;
+            });
+
+            const completedCount = uniqueRecords.filter(
+              (p: unknown) => (p as Record<string, unknown>).status === "completed"
+            ).length;
+
+            if (results.success && uniqueRecords.length > 0) {
               return prisma.crawlJob.update({
                 where: { id: job.id },
                 data: {
                   status: "COMPLETED",
-                  resultData: results.records as object,
-                  pagesCrawled: results.records.length,
+                  resultData: uniqueRecords as object,
+                  pagesCrawled: completedCount,
                   completedAt: new Date(),
                 },
               });
@@ -82,9 +95,9 @@ export async function GET() {
               return prisma.crawlJob.update({
                 where: { id: job.id },
                 data: {
-                  status: results.records.length > 0 ? "PARTIAL" : "FAILED",
-                  resultData: results.records.length > 0 ? (results.records as object) : undefined,
-                  pagesCrawled: results.records.length,
+                  status: uniqueRecords.length > 0 ? "PARTIAL" : "FAILED",
+                  resultData: uniqueRecords.length > 0 ? (uniqueRecords as object) : undefined,
+                  pagesCrawled: completedCount,
                   error: results.error || "No results returned from Cloudflare",
                   completedAt: new Date(),
                 },
