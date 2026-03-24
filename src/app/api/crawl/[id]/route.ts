@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCrawlStatus } from "@/lib/cloudflare";
+import { getCrawlStatus, getAllCrawlResults } from "@/lib/cloudflare";
 
 export async function GET(
   _req: NextRequest,
@@ -17,44 +17,62 @@ export async function GET(
       return NextResponse.json({ error: "Job not found" }, { status: 404 });
     }
 
-    // Sync with Cloudflare if running
+    // If still running, check CF status and fetch results inline if completed
     if (job.status === "RUNNING" || job.status === "QUEUED") {
       if (job.cfJobId && job.cfJobId !== "pending") {
         try {
           const cfStatus = await getCrawlStatus(job.cfJobId, job.cfAccountId);
-          if (cfStatus.success) {
-            let newStatus = job.status;
-            if (cfStatus.status === "completed") newStatus = "FETCHING_RESULTS";
-            if (cfStatus.status === "failed") newStatus = "FAILED";
+          
+          if (cfStatus.success && cfStatus.status === "completed") {
+            // Mark as fetching (lock)
+            await prisma.crawlJob.update({
+              where: { id: job.id },
+              data: { status: "FETCHING_RESULTS" },
+            });
 
-            if (newStatus !== job.status) {
-              const updatedJob = await prisma.crawlJob.update({
-                where: { id: job.id },
-                data: {
-                  status: newStatus,
-                },
-              });
-              
-              if (newStatus === "FETCHING_RESULTS") {
-                // Kickstart the background fetch process
-                const { scheduleCrawlSync } = await import("@/lib/qstash");
-                await scheduleCrawlSync({ jobId: job.id, action: "FETCH_CHUNK", cursor: null }, 0);
-              }
-              
-              return NextResponse.json({ job: updatedJob });
-            }
+            // Inline fetch all results
+            const results = await getAllCrawlResults(job.cfJobId, job.cfAccountId);
+
+            const updatedJob = await prisma.crawlJob.update({
+              where: { id: job.id },
+              data: {
+                status: results.success && results.records.length > 0 ? "COMPLETED" : "FAILED",
+                resultData: results.records.length > 0 ? (results.records as object) : undefined,
+                pagesCrawled: results.records.length,
+                completedAt: new Date(),
+                ...((!results.success || results.records.length === 0) && {
+                  error: results.error || "No results returned",
+                }),
+              },
+            });
+
+            return NextResponse.json({ job: updatedJob });
+          }
+
+          if (cfStatus.status === "failed") {
+            const updatedJob = await prisma.crawlJob.update({
+              where: { id: job.id },
+              data: { status: "FAILED", error: "Cloudflare crawl failed" },
+            });
+            return NextResponse.json({ job: updatedJob });
           }
         } catch (e) {
           console.error(`Sync failed for job ${id}:`, e);
         }
       }
     } else if (job.status === "FETCHING_RESULTS") {
-      // Just in case the webhook died, kickstart it when the user visits the page
-      try {
-        const { scheduleCrawlSync } = await import("@/lib/qstash");
-        await scheduleCrawlSync({ jobId: job.id, action: "FETCH_CHUNK", cursor: null }, 0);
-      } catch (e) {
-         console.error(`Failed to schedule chunk restart for ${id}:`, e);
+      // Another request is fetching results — just return current state
+      // If stuck for > 10 min, mark failed
+      const staleMs = Date.now() - new Date(job.updatedAt).getTime();
+      if (staleMs > 10 * 60 * 1000) {
+        const failedJob = await prisma.crawlJob.update({
+          where: { id: job.id },
+          data: {
+            status: "FAILED",
+            error: "Timeout: result fetch took too long.",
+          },
+        });
+        return NextResponse.json({ job: failedJob });
       }
     }
 

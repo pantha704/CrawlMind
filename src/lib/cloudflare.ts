@@ -209,3 +209,32 @@ export async function getCrawlResultsChunk(jobId: string, accountId?: string | n
     return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
+
+/**
+ * Fetch ALL crawl results by paginating through cursors.
+ * For typical crawls (limit: 20-100), this completes in a few seconds.
+ */
+export async function getAllCrawlResults(jobId: string, accountId?: string | null): Promise<{ success: boolean; records: unknown[]; error?: string }> {
+  const allRecords: unknown[] = [];
+  let cursor: string | null = null;
+  let attempts = 0;
+  const maxAttempts = 50; // Safety limit
+
+  while (attempts < maxAttempts) {
+    attempts++;
+    const chunk = await getCrawlResultsChunk(jobId, accountId, cursor);
+    
+    if (!chunk.success) {
+      return { success: false, records: allRecords, error: chunk.error };
+    }
+
+    if (chunk.records?.length) {
+      allRecords.push(...chunk.records);
+    }
+
+    if (!chunk.cursor) break; // No more pages
+    cursor = chunk.cursor;
+  }
+
+  return { success: true, records: allRecords };
+}

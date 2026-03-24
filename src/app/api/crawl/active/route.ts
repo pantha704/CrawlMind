@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { getCrawlStatus } from "@/lib/cloudflare";
+import { getCrawlStatus, getAllCrawlResults } from "@/lib/cloudflare";
 
 export async function GET() {
   try {
@@ -25,74 +25,83 @@ export async function GET() {
       take: 10,
     });
 
-    // Check Cloudflare for updates for each active job
     const updatedJobs = await Promise.all(
       activeJobs.map(async (job) => {
         if (!job.cfJobId || job.cfJobId === "pending") return job;
 
-        // Smart recovery for FETCHING_RESULTS jobs
+        // If FETCHING_RESULTS, results are being fetched inline by another request.
+        // If stuck > 10 min, mark as failed.
         if (job.status === "FETCHING_RESULTS") {
           const staleMs = Date.now() - new Date(job.updatedAt).getTime();
-          const timeoutMs = 10 * 60 * 1000; // 10 minutes
-
-          if (staleMs > timeoutMs) {
-            console.error(`[ACTIVE POLLING] Job ${job.id} stuck in FETCHING_RESULTS for 10min. Marking as FAILED.`);
-            const failedJob = await prisma.crawlJob.update({
+          if (staleMs > 10 * 60 * 1000) {
+            return prisma.crawlJob.update({
               where: { id: job.id },
               data: {
                 status: "FAILED",
-                error: "Timeout: Failed to download results from Cloudflare after 10 minutes.",
+                error: "Timeout: Failed to download results after 10 minutes.",
               },
             });
-            return failedJob;
           }
-
-          // If no progress in 30s, re-trigger QStash as recovery
-          if (staleMs > 30 * 1000) {
-            try {
-              const { scheduleCrawlSync } = await import("@/lib/qstash");
-              await scheduleCrawlSync({ jobId: job.id, action: "FETCH_CHUNK", cursor: null }, 0);
-              console.log(`[ACTIVE POLLING] Re-triggered QStash for stale job ${job.id}`);
-            } catch (e) {
-              console.error(`[ACTIVE POLLING] Failed to re-trigger QStash for ${job.id}:`, e);
-            }
-          }
-          return job;
+          return job; // Another request is handling it
         }
 
         try {
           const cfStatus = await getCrawlStatus(job.cfJobId, job.cfAccountId);
 
-          let newStatus = job.status;
-          
-          if (cfStatus.success) {
-            if (cfStatus.status === "completed") newStatus = "FETCHING_RESULTS";
-            if (cfStatus.status === "failed") newStatus = "FAILED";
-          } else {
-            console.error(`[ACTIVE POLLING] cfStatus returned success: false for job ${job.id}`, cfStatus);
+          if (!cfStatus.success) {
             if (cfStatus.status === "failed") {
-              newStatus = "FAILED";
+              return prisma.crawlJob.update({
+                where: { id: job.id },
+                data: { status: "FAILED", error: cfStatus.error || "Cloudflare crawl failed" },
+              });
+            }
+            return job;
+          }
+
+          if (cfStatus.status === "completed") {
+            // Mark as fetching first (prevents other polling requests from double-fetching)
+            await prisma.crawlJob.update({
+              where: { id: job.id },
+              data: { status: "FETCHING_RESULTS" },
+            });
+
+            // Fetch all results inline
+            const results = await getAllCrawlResults(job.cfJobId, job.cfAccountId);
+
+            if (results.success && results.records.length > 0) {
+              return prisma.crawlJob.update({
+                where: { id: job.id },
+                data: {
+                  status: "COMPLETED",
+                  resultData: results.records as object,
+                  pagesCrawled: results.records.length,
+                  completedAt: new Date(),
+                },
+              });
+            } else {
+              return prisma.crawlJob.update({
+                where: { id: job.id },
+                data: {
+                  status: results.records.length > 0 ? "PARTIAL" : "FAILED",
+                  resultData: results.records.length > 0 ? (results.records as object) : undefined,
+                  pagesCrawled: results.records.length,
+                  error: results.error || "No results returned from Cloudflare",
+                  completedAt: new Date(),
+                },
+              });
             }
           }
 
-          if (newStatus !== job.status) {
-            const updatedJob = await prisma.crawlJob.update({
+          if (cfStatus.status === "failed") {
+            return prisma.crawlJob.update({
               where: { id: job.id },
-              data: {
-                status: newStatus,
-              },
+              data: { status: "FAILED", error: "Cloudflare crawl failed" },
             });
-
-            if (newStatus === "FETCHING_RESULTS") {
-              const { scheduleCrawlSync } = await import("@/lib/qstash");
-              await scheduleCrawlSync({ jobId: job.id, action: "FETCH_CHUNK", cursor: null }, 0);
-            }
-            
-            return updatedJob;
           }
         } catch (e) {
           console.error(`Status sync failed for job ${job.id}:`, e);
         }
+
         return job;
       })
     );
