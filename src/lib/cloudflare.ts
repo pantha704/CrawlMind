@@ -30,7 +30,7 @@ let currentCredIndex = 0;
 export interface CrawlConfig {
   url: string;
   source?: "all" | "sitemaps" | "links";
-  maxPages?: number;
+  limit?: number;
   depth?: number;
   formats?: ("html" | "markdown" | "json")[];
   render?: boolean;

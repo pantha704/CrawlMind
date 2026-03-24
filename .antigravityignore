@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+.next/
+dist/
+build/
+out/
+
+# Version control
+.git/
+
+# Lock files
+*.lock
+package-lock.json
+
+# IDE/Editor
+.vscode/
+.idea/
+
+# Generated
+.vercel/
+.turbo/
+coverage/
+
+# Large assets
+*.mp4
+*.mov
+*.zip
+*.tar.gz
+
+# Prisma generated
+node_modules/.prisma/
