@@ -29,22 +29,38 @@ export function ActiveJobs() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
+    let timeoutId: NodeJS.Timeout;
+
     async function fetchJobs() {
+      if (!active) return;
       try {
         const res = await fetch("/api/crawl/active");
         if (res.ok) {
           const data = await res.json();
-          setJobs(data.jobs || []);
+          const fetchedJobs: Job[] = data.jobs || [];
+          setJobs(fetchedJobs);
+
+          // Adaptive polling: 3s if active jobs exist, 10s otherwise
+          const hasActive = fetchedJobs.some(
+            (j) => j.status === "RUNNING" || j.status === "QUEUED" || j.status === "FETCHING_RESULTS"
+          );
+          timeoutId = setTimeout(fetchJobs, hasActive ? 3000 : 10000);
+        } else {
+          timeoutId = setTimeout(fetchJobs, 10000);
         }
       } catch {
-        // silent fail for now
+        timeoutId = setTimeout(fetchJobs, 10000);
       } finally {
         setLoading(false);
       }
     }
+
     fetchJobs();
-    const interval = setInterval(fetchJobs, 5000);
-    return () => clearInterval(interval);
+    return () => {
+      active = false;
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   const handleCancel = async (jobId: string) => {

@@ -103,9 +103,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: "failed" });
     }
 
-    // Still running — re-queue
-    await scheduleCrawlSync({ jobId, action: "SYNC" }, 60);
-    return NextResponse.json({ status: "pending", nextCheck: 60 });
+    // Still running — re-queue (15s for near real-time detection)
+    await scheduleCrawlSync({ jobId, action: "SYNC" }, 15);
+    return NextResponse.json({ status: "pending", nextCheck: 15 });
 
   } catch (err) {
     console.error("Crawl sync webhook error:", err);

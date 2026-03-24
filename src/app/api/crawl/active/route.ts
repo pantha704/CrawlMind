@@ -30,21 +30,34 @@ export async function GET() {
       activeJobs.map(async (job) => {
         if (!job.cfJobId || job.cfJobId === "pending") return job;
 
-        // If job is stuck in FETCHING_RESULTS for > 3 minutes, assume QStash sync failed permanently
+        // Smart recovery for FETCHING_RESULTS jobs
         if (job.status === "FETCHING_RESULTS") {
-          const timeoutMs = 3 * 60 * 1000; // 3 minutes
-          if (Date.now() - new Date(job.updatedAt).getTime() > timeoutMs) {
-            console.error(`[ACTIVE POLLING] Job ${job.id} stuck in FETCHING_RESULTS. Marking as FAILED.`);
+          const staleMs = Date.now() - new Date(job.updatedAt).getTime();
+          const timeoutMs = 10 * 60 * 1000; // 10 minutes
+
+          if (staleMs > timeoutMs) {
+            console.error(`[ACTIVE POLLING] Job ${job.id} stuck in FETCHING_RESULTS for 10min. Marking as FAILED.`);
             const failedJob = await prisma.crawlJob.update({
               where: { id: job.id },
               data: {
                 status: "FAILED",
-                error: "Timeout: Failed to download results from Cloudflare. Background sync worker may be failing.",
+                error: "Timeout: Failed to download results from Cloudflare after 10 minutes.",
               },
             });
             return failedJob;
           }
-          return job; // Otherwise, just wait for QStash to finish
+
+          // If no progress in 30s, re-trigger QStash as recovery
+          if (staleMs > 30 * 1000) {
+            try {
+              const { scheduleCrawlSync } = await import("@/lib/qstash");
+              await scheduleCrawlSync({ jobId: job.id, action: "FETCH_CHUNK", cursor: null }, 0);
+              console.log(`[ACTIVE POLLING] Re-triggered QStash for stale job ${job.id}`);
+            } catch (e) {
+              console.error(`[ACTIVE POLLING] Failed to re-trigger QStash for ${job.id}:`, e);
+            }
+          }
+          return job;
         }
 
         try {
