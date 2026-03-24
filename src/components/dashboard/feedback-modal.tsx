@@ -25,27 +25,11 @@ export function FeedbackModal() {
 
   useEffect(() => {
     const handleOpen = () => setOpen(true);
-    
-    const handleTriggerCheck = async () => {
-      try {
-        const res = await fetch("/api/feedback");
-        if (res.ok) {
-          const data = await res.json();
-          if (data.canPrompt) {
-            setOpen(true);
-          }
-        }
-      } catch (err) {
-        // silently fail
-      }
-    };
 
     window.addEventListener("open-feedback-modal", handleOpen);
-    window.addEventListener("trigger-feedback-check", handleTriggerCheck);
     
     return () => {
       window.removeEventListener("open-feedback-modal", handleOpen);
-      window.removeEventListener("trigger-feedback-check", handleTriggerCheck);
     };
   }, []);
 

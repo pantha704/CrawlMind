@@ -8,7 +8,7 @@ async function run() {
   
   const start = await startCrawlJob({
     url,
-    limit: 50,
+    maxPages: 50,
     depth: 3,
     formats: ["markdown", "html"],
     render: true
