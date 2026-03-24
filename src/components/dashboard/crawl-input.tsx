@@ -98,6 +98,7 @@ export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
   const [excludePatterns, setExcludePatterns] = useState("");
   const [maxAge, setMaxAge] = useState(86400); // 24 hours
   const [modifiedSince, setModifiedSince] = useState("");
+  const [crawlPurposes, setCrawlPurposes] = useState<string[]>([]);
 
   // Auto-detect input type
   const detectedMode = useMemo(() => {
@@ -156,7 +157,8 @@ export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
           source,
           excludePatterns: excludePatterns.trim() ? excludePatterns.split(",").map(p => p.trim()) : undefined,
           maxAge: maxAge,
-          modifiedSince: modifiedSince ? new Date(modifiedSince).toISOString() : undefined,
+          modifiedSince: modifiedSince || undefined,
+          crawlPurposes: crawlPurposes.length > 0 ? crawlPurposes : undefined,
         }),
       });
 
@@ -329,12 +331,12 @@ export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
                   />
                 </div>
 
-                {/* URL limit */}
+                {/* Page limit */}
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground flex items-center">
-                    Max URLs
+                    Max Pages
                     <span className="text-primary ml-1">(max {maxPages.toLocaleString()})</span>
-                    <InfoTip text="Maximum number of URLs to crawl. The crawler stops after reaching this limit, even if there are more links to follow." />
+                    <InfoTip text="Maximum number of pages to crawl. The crawler stops after reaching this limit, even if there are more links to follow." />
                   </Label>
                   <Input
                     type="number"
@@ -495,6 +497,36 @@ export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
                     onChange={(e) => setModifiedSince(e.target.value)}
                     className="bg-secondary/50"
                   />
+                </div>
+
+                {/* Crawl Purposes */}
+                <div className="space-y-2 sm:col-span-2 md:col-span-4">
+                  <Label className="text-xs text-muted-foreground flex items-center">
+                    Crawl Purposes
+                    <InfoTip text="Declare your crawl intent for Content Signals compliance. Sites can use these to control access. Leave empty if unsure." />
+                  </Label>
+                  <div className="flex flex-wrap gap-2">
+                    {(["search", "ai-input", "ai-train"] as const).map((purpose) => (
+                      <button
+                        key={purpose}
+                        type="button"
+                        onClick={() => {
+                          setCrawlPurposes((prev) =>
+                            prev.includes(purpose)
+                              ? prev.filter((p) => p !== purpose)
+                              : [...prev, purpose]
+                          );
+                        }}
+                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${
+                          crawlPurposes.includes(purpose)
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-secondary/50 text-muted-foreground border-border/50 hover:border-primary/50"
+                        }`}
+                      >
+                        {purpose}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>

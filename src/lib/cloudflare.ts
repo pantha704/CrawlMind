@@ -30,12 +30,13 @@ let currentCredIndex = 0;
 export interface CrawlConfig {
   url: string;
   source?: "all" | "sitemaps" | "links";
-  maxURLs?: number;
+  limit?: number;
   depth?: number;
   formats?: ("html" | "markdown" | "json")[];
   render?: boolean;
   maxAge?: number;
-  modifiedSince?: string;
+  modifiedSince?: number;
+  crawlPurposes?: ("search" | "ai-input" | "ai-train")[];
   options?: {
     includePatterns?: string[];
     excludePatterns?: string[];

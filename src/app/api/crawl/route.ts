@@ -136,12 +136,13 @@ export async function POST(req: NextRequest) {
     const crawlOpts: CrawlConfig = {
       url: urls[0],
       source: body.source || "all",
-      maxURLs: limit || 100,
+      limit: limit || 100,
       depth: depth || 2,
       formats: [format || "markdown"],
       render: render || false,
       ...(body.maxAge !== undefined && { maxAge: body.maxAge }),
-      ...(body.modifiedSince && { modifiedSince: body.modifiedSince }),
+      ...(body.modifiedSince && { modifiedSince: Math.floor(new Date(body.modifiedSince).getTime() / 1000) }),
+      ...(body.crawlPurposes?.length && { crawlPurposes: body.crawlPurposes }),
       options: {
         includeSubdomains: includeSubdomains ?? true,
         includeExternalLinks: includeExternalLinks ?? false,
