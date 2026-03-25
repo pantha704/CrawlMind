@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { startCrawlJob, type CrawlConfig } from "@/lib/cloudflare";
-import { discoverUrls, estimateUsage, DEPTH_TIERS, type DepthLevel } from "@/lib/research";
+import { discoverUrls, fetchSourceContent, estimateUsage, DEPTH_TIERS, type DepthLevel } from "@/lib/research";
 
 export const maxDuration = 60;
 
@@ -29,13 +29,26 @@ export async function POST(req: NextRequest) {
 
     const tier = DEPTH_TIERS[depthLevel];
 
-    // If user provided a URL + AI toggle, use that URL as the seed for AI discovery
+    // If user provided a URL, pre-fetch it so Groq gets real context
+    let sourceContent = "";
+    if (sourceUrl) {
+      console.log(`[research] Pre-fetching source URL for context: ${sourceUrl}`);
+      sourceContent = await fetchSourceContent(sourceUrl);
+      console.log(`[research] Got ${sourceContent.length} chars of context from source`);
+    }
+
+    // Build the research query
     const researchQuery = sourceUrl && aiDiscovery
       ? `Find sites related to ${sourceUrl} — ${query || "comprehensive research"}`
       : query;
 
-    // Step 1: AI discovers URLs via Groq
-    const { urls: discovered, error: discoverError } = await discoverUrls(researchQuery, depthLevel);
+    // Step 1: AI discovers URLs via Groq (now with source context when available)
+    const { urls: discovered, error: discoverError } = await discoverUrls(
+      researchQuery,
+      depthLevel,
+      [],
+      sourceContent || undefined
+    );
 
     if (discovered.length === 0) {
       return NextResponse.json(

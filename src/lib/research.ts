@@ -14,6 +14,43 @@ export const DEPTH_TIERS = {
 export type DepthLevel = keyof typeof DEPTH_TIERS;
 
 // ---------------------------------------------------------------------------
+// Lightweight source content fetcher (pre-crawl, ~1-2s)
+// ---------------------------------------------------------------------------
+
+export async function fetchSourceContent(url: string): Promise<string> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "CrawlMind/1.0 (Research Discovery)",
+        "Accept": "text/html,application/xhtml+xml,text/plain",
+      },
+    });
+    clearTimeout(timeout);
+
+    if (!res.ok) return "";
+    const html = await res.text();
+
+    // Strip HTML tags, scripts, styles — extract readable text
+    const text = html
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    // Return first ~3000 chars — enough for AI to understand context
+    return text.slice(0, 3000);
+  } catch (e) {
+    console.warn(`[research] Could not pre-fetch ${url}:`, e);
+    return "";
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Groq: URL Discovery (fast, ~200ms)
 // ---------------------------------------------------------------------------
 
@@ -26,11 +63,17 @@ interface DiscoveredUrl {
 export async function discoverUrls(
   query: string,
   depth: DepthLevel,
-  existingUrls: string[] = []
+  existingUrls: string[] = [],
+  sourceContent?: string
 ): Promise<{ urls: DiscoveredUrl[]; error?: string }> {
   const tier = DEPTH_TIERS[depth];
   const excludeClause = existingUrls.length > 0
     ? `\n\nDo NOT include these already-crawled URLs:\n${existingUrls.join("\n")}`
+    : "";
+
+  // If we have pre-crawled source content, give the AI real context
+  const contextClause = sourceContent
+    ? `\n\nI've already read the source page. Here's what it contains:\n---\n${sourceContent.slice(0, 2500)}\n---\nUse this understanding to find the most relevant related sources. Think about what documentation, research papers, related projects, or discussions would complement this content.`
     : "";
 
   try {
@@ -46,8 +89,10 @@ For each URL, return a JSON object with:
 Rules:
 - Prefer primary/official sources over aggregators
 - Include diverse domains (not just one site)
+- URLs must be real, well-known, existing pages (no guessing random paths)
+- Think deeply about what sources would provide the most value for this topic
 - Return exactly ${tier.urls} URLs
-- Return ONLY a valid JSON array, no markdown, no explanation${excludeClause}
+- Return ONLY a valid JSON array, no markdown, no explanation${contextClause}${excludeClause}
 
 Topic: ${query}`,
     });
