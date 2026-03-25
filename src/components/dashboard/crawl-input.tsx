@@ -29,11 +29,22 @@ import {
   Loader2,
   Rocket,
   Info,
+  Brain,
+  Search,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRef } from "react";
 import { Upload } from "lucide-react";
+
+const DEPTH_TIERS = {
+  QUICK: { icon: Zap, label: "Quick", description: "AI finds 3-5 relevant sources and crawls them (~30s)" },
+  STANDARD: { icon: Search, label: "Deep Dive", description: "AI finds 10-15 sources across categories and crawls them (~2min)" },
+  RESEARCH: { icon: Brain, label: "Research", description: "Multi-hop: crawl → analyze gaps → follow-up crawls, 2-3 rounds (~5min)" },
+} as const;
+
+type DepthLevel = keyof typeof DEPTH_TIERS;
 
 function InfoTip({ text }: { text: string }) {
   return (
@@ -85,6 +96,10 @@ export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // AI Discovery
+  const [aiDiscovery, setAiDiscovery] = useState(false);
+  const [depthLevel, setDepthLevel] = useState<DepthLevel>("QUICK");
+
   // Advanced params
   const [depth, setDepth] = useState(2);
   const [limit, setLimit] = useState(20);
@@ -104,6 +119,9 @@ export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
   const detectedMode = useMemo(() => {
     return looksLikeUrl(query) ? "url" : "ai";
   }, [query]);
+
+  // Whether to use AI Discovery flow
+  const useResearchFlow = aiDiscovery || detectedMode === "ai";
 
   // Fetch plan limits on mount
   useEffect(() => {
@@ -142,34 +160,60 @@ export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/crawl", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: query.trim(),
-          inputType: detectedMode === "url" ? "URL" : "PLAINTEXT",
-          depth,
-          limit: Math.min(limit, maxPages),
-          format,
-          render: jsRender,
-          includeSubdomains,
-          includeExternalLinks,
-          source,
-          excludePatterns: excludePatterns.trim() ? excludePatterns.split(",").map(p => p.trim()) : undefined,
-          maxAge: maxAge,
-          modifiedSince: modifiedSince || undefined,
-          crawlPurposes: crawlPurposes.length > 0 ? crawlPurposes : undefined,
-        }),
-      });
+      if (useResearchFlow) {
+        // AI Discovery flow → /api/research
+        const res = await fetch("/api/research", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query: query.trim(),
+            depth: depthLevel,
+            aiDiscovery: true,
+            sourceUrl: detectedMode === "url" ? query.trim().split(/[\n,]+/)[0]?.trim() : undefined,
+          }),
+        });
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to start crawl");
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || "Failed to start research");
+        }
+
+        const data = await res.json();
+        toast.success(`AI Research started! Discovering ${data.subJobCount} sources (${DEPTH_TIERS[depthLevel].label})`);
+        setQuery("");
+        setAiDiscovery(false);
+        onCrawlStarted?.();
+      } else {
+        // Normal crawl flow → /api/crawl
+        const res = await fetch("/api/crawl", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query: query.trim(),
+            inputType: "URL",
+            depth,
+            limit: Math.min(limit, maxPages),
+            format,
+            render: jsRender,
+            includeSubdomains,
+            includeExternalLinks,
+            source,
+            excludePatterns: excludePatterns.trim() ? excludePatterns.split(",").map(p => p.trim()) : undefined,
+            maxAge: maxAge,
+            modifiedSince: modifiedSince || undefined,
+            crawlPurposes: crawlPurposes.length > 0 ? crawlPurposes : undefined,
+          }),
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || "Failed to start crawl");
+        }
+
+        toast.success("Crawl started! Watch the progress below.");
+        setQuery("");
+        onCrawlStarted?.();
       }
-
-      toast.success("Crawl started! Watch the progress below.");
-      setQuery("");
-      onCrawlStarted?.();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -248,6 +292,71 @@ export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
         </div>
       </div>
 
+      {/* AI Discovery Section */}
+      <AnimatePresence>
+        {query.trim() && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="flex items-center gap-4 p-3 rounded-lg bg-card/50 border border-border/30">
+              {/* AI Discovery Toggle */}
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={useResearchFlow}
+                  onCheckedChange={(checked) => setAiDiscovery(checked)}
+                  disabled={detectedMode === "ai"}
+                />
+                <Label className="text-sm font-medium flex items-center gap-1.5 cursor-pointer">
+                  <Brain className="w-4 h-4 text-purple-400" />
+                  AI Discovery
+                  <InfoTip text={detectedMode === "url"
+                    ? "Find and crawl related sites for deeper research on this URL"
+                    : "AI will find the best sources and crawl them for you"
+                  } />
+                </Label>
+              </div>
+
+              {/* Depth Selector */}
+              {useResearchFlow && (
+                <div className="flex items-center gap-1.5 ml-auto">
+                  {(Object.entries(DEPTH_TIERS) as [DepthLevel, typeof DEPTH_TIERS[DepthLevel]][]).map(([key, tier]) => {
+                    const Icon = tier.icon;
+                    const isActive = depthLevel === key;
+                    return (
+                      <TooltipProvider key={key}>
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <button
+                                onClick={() => setDepthLevel(key)}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                  isActive
+                                    ? "bg-primary text-primary-foreground shadow-sm"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                                }`}
+                              >
+                                <Icon className="w-3.5 h-3.5" />
+                                {tier.label}
+                              </button>
+                            }
+                          />
+                          <TooltipContent side="bottom" className="max-w-[260px] text-xs leading-relaxed">
+                            {tier.description}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Actions row */}
       <div className="flex items-center justify-between">
         <button
@@ -259,7 +368,7 @@ export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
           ) : (
             <ChevronDown className="w-4 h-4" />
           )}
-          Advanced Parameters
+          {useResearchFlow ? "Crawl Parameters" : "Advanced Parameters"}
         </button>
         <div className="flex items-center gap-3">
           <input
@@ -292,12 +401,15 @@ export function CrawlInput({ onCrawlStarted }: CrawlInputProps) {
             {loading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Starting...
+                {useResearchFlow ? "Researching..." : "Starting..."}
               </>
             ) : (
               <>
-                <Rocket className="w-4 h-4 mr-2" />
-                Start Crawl
+                {useResearchFlow ? (
+                  <><Brain className="w-4 h-4 mr-2" />Start Research</>
+                ) : (
+                  <><Rocket className="w-4 h-4 mr-2" />Start Crawl</>
+                )}
               </>
             )}
           </Button>
