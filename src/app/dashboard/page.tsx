@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CrawlInput } from "@/components/dashboard/crawl-input";
 import { ActiveJobs } from "@/components/dashboard/active-jobs";
+import { RecentResearch } from "@/components/dashboard/recent-research";
 import { RecentCrawls } from "@/components/dashboard/recent-crawls";
 
 export default function DashboardPage() {
@@ -15,6 +16,9 @@ export default function DashboardPage() {
 
       {/* Active Jobs */}
       <ActiveJobs key={`active-${refreshKey}`} />
+
+      {/* Recent Research */}
+      <RecentResearch key={`research-${refreshKey}`} />
 
       {/* Recent Crawls */}
       <RecentCrawls key={`recent-${refreshKey}`} />

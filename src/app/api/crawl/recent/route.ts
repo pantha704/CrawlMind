@@ -20,6 +20,7 @@ export async function GET() {
         userId,
         status: { in: ["COMPLETED", "PARTIAL", "FAILED"] },
         deletedAt: null,
+        researchJobId: null, // Exclude sub-crawls from research jobs
       },
       orderBy: { createdAt: "desc" },
       take: 20,
